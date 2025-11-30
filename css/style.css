@@ -6,17 +6,22 @@ body {
     touch-action: none;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: var(--tg-theme-bg-color, #000);
-    /* Use TG theme color or black */
     color: var(--tg-theme-text-color, #e2e8f0);
     user-select: none;
     -webkit-user-select: none;
     height: 100vh;
+    width: 100vw;
 }
 
 #game-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
     display: block;
-    width: 100%;
-    height: 100%;
+    touch-action: none;
+    object-fit: contain;
 }
 
 .ui-layer {
@@ -27,7 +32,6 @@ body {
     height: 100%;
     pointer-events: none;
     z-index: 100;
-    /* Increased z-index */
 }
 
 .interactive {

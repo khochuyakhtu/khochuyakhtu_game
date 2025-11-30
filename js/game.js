@@ -1,3 +1,118 @@
+// --- Loading & Menu System ---
+(function () {
+    let loadingProgress = 0;
+    const loadingScreen = document.getElementById('loading-screen');
+    const mainMenu = document.getElementById('main-menu');
+    const tasksScreen = document.getElementById('tasks-screen');
+    const loadingBar = document.getElementById('loading-progress');
+    const loadingText = document.getElementById('loading-text');
+
+    // Simulate loading
+    const loadInterval = setInterval(() => {
+        loadingProgress += Math.random() * 15 + 5;
+        if (loadingProgress >= 100) {
+            loadingProgress = 100;
+            clearInterval(loadInterval);
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                mainMenu.style.display = 'flex';
+            }, 300);
+        }
+        loadingBar.style.width = loadingProgress + '%';
+        loadingText.textContent = `Завантаження... ${Math.floor(loadingProgress)}%`;
+    }, 100);
+
+    // Menu Navigation
+    document.getElementById('start-game-btn').onclick = () => {
+        mainMenu.style.display = 'none';
+        document.getElementById('game-canvas').style.display = 'block';
+        document.getElementById('hud-money').style.display = 'flex';
+        document.getElementById('hud-stats').style.display = 'block';
+        document.getElementById('hud-biome').style.display = 'block';
+        document.getElementById('garage-btn').style.display = 'flex';
+        document.getElementById('audio-btn').style.display = 'block';
+        document.getElementById('skills-container').style.display = 'flex';
+
+        // Initialize game if not already
+        if (!window.game) {
+            window.game = new Game();
+        }
+    };
+
+    document.getElementById('tasks-btn').onclick = () => {
+        mainMenu.style.display = 'none';
+        tasksScreen.style.display = 'flex';
+        checkSubscriptionStatus();
+    };
+
+    document.getElementById('back-to-menu-btn').onclick = () => {
+        tasksScreen.style.display = 'none';
+        mainMenu.style.display = 'flex';
+    };
+
+    // Channel Subscription Logic
+    function checkSubscriptionStatus() {
+        const subscribed = localStorage.getItem('channelSubscribed') === 'true';
+        const rewarded = localStorage.getItem('subscriptionRewarded') === 'true';
+
+        if (subscribed && rewarded) {
+            document.getElementById('reward-status').style.display = 'block';
+            document.getElementById('subscribe-btn').disabled = true;
+            document.getElementById('subscribe-btn').style.opacity = '0.5';
+            document.getElementById('check-subscription-btn').disabled = true;
+            document.getElementById('check-subscription-btn').style.opacity = '0.5';
+        }
+    }
+
+    document.getElementById('subscribe-btn').onclick = () => {
+        // Open Telegram channel
+        if (window.Telegram?.WebApp) {
+            window.Telegram.WebApp.openTelegramLink('https://t.me/khochuyakhtu');
+        } else {
+            window.open('https://t.me/khochuyakhtu', '_blank');
+        }
+        // Enable check button after subscribe
+        document.getElementById('check-subscription-btn').disabled = false;
+        document.getElementById('check-subscription-btn').style.opacity = '1';
+    };
+
+    document.getElementById('check-subscription-btn').onclick = () => {
+        // Mark as subscribed (honor system)
+        localStorage.setItem('channelSubscribed', 'true');
+        localStorage.setItem('subscriptionRewarded', 'true');
+
+        // Show reward message
+        document.getElementById('reward-status').style.display = 'block';
+        document.getElementById('subscribe-btn').disabled = true;
+        document.getElementById('subscribe-btn').style.opacity = '0.5';
+        document.getElementById('check-subscription-btn').disabled = true;
+        document.getElementById('check-subscription-btn').style.opacity = '0.5';
+
+        // Add money to player if game started
+        const saveKey = getSaveKeyFromStorage();
+        const savedData = localStorage.getItem(saveKey);
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            data.money = (data.money || 0) + 500;
+            localStorage.setItem(saveKey, JSON.stringify(data));
+        } else {
+            // Create initial save with bonus
+            localStorage.setItem(saveKey, JSON.stringify({ money: 500 }));
+        }
+
+        alert('Вітаємо! Ви отримали 500$ за підписку на канал! 🎉');
+    };
+
+    function getSaveKeyFromStorage() {
+        const tg = window.Telegram?.WebApp;
+        let prefix = 'yachtSave';
+        if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            prefix += `_${tg.initDataUnsafe.user.id}`;
+        }
+        return prefix;
+    }
+})();
+
 // --- Audio System ---
 const Sound = {
     ctx: null, enabled: false,
