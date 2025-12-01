@@ -670,11 +670,11 @@ class Game {
     }
 
     checkCollisions() {
-        // Calculate viewport bounds
-        const viewportTop = this.player.y - window.innerHeight / 2 - 100; // Extra margin
+        // Calculate viewport bounds (Fixed X for vertical scroller)
+        const viewportTop = this.player.y - window.innerHeight / 2 - 100;
         const viewportBottom = this.player.y + window.innerHeight / 2 + 100;
-        const viewportLeft = this.player.x - window.innerWidth / 2 - 100;
-        const viewportRight = this.player.x + window.innerWidth / 2 + 100;
+        const viewportLeft = -100; // Fixed left bound with margin
+        const viewportRight = window.innerWidth + 100; // Fixed right bound with margin
 
         // Helper to check if entity is in viewport
         const isVisible = (entity) => {
@@ -838,12 +838,13 @@ class Game {
         this.ctx.save();
         this.ctx.translate(0, -this.camY);
 
-        // Viewport bounds for drawing (same as collision detection)
+        // Viewport bounds (Fixed X for vertical scroller)
         const viewportTop = this.player.y - window.innerHeight / 2 - 100;
         const viewportBottom = this.player.y + window.innerHeight / 2 + 100;
-        const viewportLeft = this.player.x - window.innerWidth / 2 - 100;
-        const viewportRight = this.player.x + window.innerWidth / 2 + 100;
+        const viewportLeft = -100; // Fixed left bound with margin
+        const viewportRight = window.innerWidth + 100; // Fixed right bound with margin
 
+        // Helper to check if entity is in viewport
         const isVisible = (entity) => {
             return entity.y > viewportTop && entity.y < viewportBottom &&
                 entity.x > viewportLeft && entity.x < viewportRight;
