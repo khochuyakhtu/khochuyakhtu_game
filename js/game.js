@@ -815,8 +815,20 @@ class Game {
         this.ctx.save();
         this.ctx.translate(0, -this.camY);
 
+        // Viewport bounds for drawing (same as collision detection)
+        const viewportTop = this.player.y - window.innerHeight / 2 - 100;
+        const viewportBottom = this.player.y + window.innerHeight / 2 + 100;
+        const viewportLeft = this.player.x - window.innerWidth / 2 - 100;
+        const viewportRight = this.player.x + window.innerWidth / 2 + 100;
+
+        const isVisible = (entity) => {
+            return entity.y > viewportTop && entity.y < viewportBottom &&
+                entity.x > viewportLeft && entity.x < viewportRight;
+        };
+
         // Whirlpools
         this.entities.whirlpools.forEach(w => {
+            if (!isVisible(w)) return;
             this.ctx.strokeStyle = 'rgba(255,255,255,0.4)';
             this.ctx.lineWidth = 3;
             this.ctx.beginPath();
@@ -829,6 +841,7 @@ class Game {
 
         // Icebergs
         this.entities.icebergs.forEach(ice => {
+            if (!isVisible(ice)) return;
             this.ctx.fillStyle = '#e0f2fe';
             this.ctx.fillRect(ice.x - ice.w / 2, ice.y - ice.h / 2, ice.w, ice.h);
             this.ctx.fillStyle = '#bae6fd'; // Shadow
@@ -860,7 +873,7 @@ class Game {
 
         // Kraken
         this.entities.tentacles.forEach(t => {
-            if (!t.active) return;
+            if (!t.active || !isVisible(t)) return;
             this.ctx.fillStyle = '#7f1d1d';
             this.ctx.beginPath();
             this.ctx.moveTo(t.x, t.y);
@@ -882,6 +895,7 @@ class Game {
 
         // Sharks
         this.entities.sharks.forEach(s => {
+            if (!isVisible(s)) return;
             this.ctx.save();
             this.ctx.translate(s.x, s.y);
             this.ctx.rotate(s.angle);
@@ -894,6 +908,7 @@ class Game {
 
         // Mines
         this.entities.mines.forEach(m => {
+            if (!isVisible(m)) return;
             let color = CONFIG.tierColors[m.lvl] || '#fff';
 
             // Glow effect
@@ -921,6 +936,8 @@ class Game {
         const magnetR = baseMagnet * this.player.pickupRange;
 
         this.entities.coins.forEach(c => {
+            if (!isVisible(c)) return;
+
             // Magnet Visual
             let d = Math.hypot(c.x - this.player.x, c.y - this.player.y);
             if (d < magnetR) {
