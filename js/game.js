@@ -243,13 +243,30 @@ class Game {
     }
 
     initInput() {
-        const start = (x, y) => {
-            this.input.active = true;
-            this.input.origin = { x, y };
-            this.input.x = x; this.input.y = y;
+        // Helper to convert screen coordinates to canvas coordinates
+        const getCanvasCoords = (clientX, clientY) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
         };
-        const move = (x, y) => {
-            if (this.input.active) { this.input.x = x; this.input.y = y; }
+
+        const start = (clientX, clientY) => {
+            const coords = getCanvasCoords(clientX, clientY);
+            this.input.active = true;
+            this.input.origin = { x: coords.x, y: coords.y };
+            this.input.x = coords.x;
+            this.input.y = coords.y;
+        };
+        const move = (clientX, clientY) => {
+            if (this.input.active) {
+                const coords = getCanvasCoords(clientX, clientY);
+                this.input.x = coords.x;
+                this.input.y = coords.y;
+            }
         };
         const end = () => this.input.active = false;
 
@@ -261,7 +278,10 @@ class Game {
             if (e.target === this.canvas) e.preventDefault();
             start(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: false });
-        window.addEventListener('touchmove', e => { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY) }, { passive: false });
+        window.addEventListener('touchmove', e => {
+            e.preventDefault();
+            if (e.touches[0]) move(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
         window.addEventListener('touchend', end);
 
         // Keyboard controls

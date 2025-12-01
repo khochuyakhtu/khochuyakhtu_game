@@ -21,7 +21,6 @@ body {
     height: 100vh !important;
     display: block;
     touch-action: none;
-    object-fit: contain;
 }
 
 .ui-layer {
