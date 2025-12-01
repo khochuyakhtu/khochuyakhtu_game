@@ -1187,6 +1187,61 @@ class Game {
         setTimeout(() => el.remove(), 1000);
     }
 
+    drawDebug() {
+        if (!this.debug) return;
+        this.ctx.save();
+        this.ctx.translate(0, -this.camY);
+
+        // Magnet Range
+        const baseMagnet = this.player.isYacht ? 60 : 30;
+        const magnetR = baseMagnet * this.player.pickupRange;
+        this.ctx.strokeStyle = 'rgba(250, 204, 21, 0.5)';
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.beginPath(); this.ctx.arc(this.player.x, this.player.y, magnetR, 0, Math.PI * 2); this.ctx.stroke();
+        this.ctx.setLineDash([]);
+
+        // Player Hitbox
+        this.ctx.strokeStyle = 'lime';
+        this.ctx.lineWidth = 2;
+        if (this.player.isYacht) {
+            const boatLen = 80;
+            const halfLen = boatLen / 2;
+            const cos = Math.cos(this.player.angle);
+            const sin = Math.sin(this.player.angle);
+            const x1 = this.player.x + cos * halfLen;
+            const y1 = this.player.y + sin * halfLen;
+            const x2 = this.player.x - cos * halfLen;
+            const y2 = this.player.y - sin * halfLen;
+            this.ctx.beginPath(); this.ctx.moveTo(x1, y1); this.ctx.lineTo(x2, y2); this.ctx.stroke();
+
+            // Draw capsule ends
+            this.ctx.beginPath(); this.ctx.arc(x1, y1, 5, 0, Math.PI * 2); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.arc(x2, y2, 5, 0, Math.PI * 2); this.ctx.stroke();
+        } else {
+            // Donut Hitbox (Visual approx)
+            this.ctx.beginPath(); this.ctx.arc(this.player.x, this.player.y, 20, 0, Math.PI * 2); this.ctx.stroke();
+        }
+
+        // Entity Hitboxes
+        this.entities.mines.forEach(m => {
+            // Draw actual collision circle (R + PlayerMargin)
+            this.ctx.strokeStyle = 'red';
+            this.ctx.beginPath(); this.ctx.arc(m.x, m.y, m.r + 15, 0, Math.PI * 2); this.ctx.stroke();
+
+            // Draw visual radius
+            this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+            this.ctx.beginPath(); this.ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2); this.ctx.stroke();
+        });
+
+        this.entities.sharks.forEach(s => {
+            this.ctx.strokeStyle = 'red';
+            this.ctx.beginPath(); this.ctx.arc(s.x, s.y, 35, 0, Math.PI * 2); this.ctx.stroke();
+        });
+
+        this.ctx.restore();
+    }
+
     loop() {
         if (!this.paused) this.update();
         this.draw();
