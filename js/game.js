@@ -839,19 +839,46 @@ class Game {
         // Mines
         this.entities.mines.forEach(m => {
             let color = CONFIG.tierColors[m.lvl] || '#fff';
+
+            // Glow effect
+            this.ctx.save();
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = color;
+
             this.ctx.fillStyle = '#1e293b';
             this.ctx.beginPath(); this.ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2); this.ctx.fill();
             this.ctx.fillStyle = color; this.ctx.beginPath(); this.ctx.arc(m.x, m.y, m.r * 0.5, 0, Math.PI * 2); this.ctx.fill();
-            this.ctx.strokeStyle = '#0f172a';
+
+            this.ctx.strokeStyle = color;
+            this.ctx.lineWidth = 2;
             for (let i = 0; i < 8; i++) {
                 let a = (Math.PI * 2 / 8) * i + (this.gameTime * 0.02);
                 this.ctx.beginPath(); this.ctx.moveTo(m.x, m.y); this.ctx.lineTo(m.x + Math.cos(a) * (m.r + 5), m.y + Math.sin(a) * (m.r + 5)); this.ctx.stroke();
             }
+            this.ctx.restore();
+
             this.ctx.fillStyle = 'white'; this.ctx.font = 'bold 12px Arial'; this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle'; this.ctx.fillText(m.lvl, m.x, m.y);
         });
 
         // Coins
+        const baseMagnet = this.player.isYacht ? 60 : 30;
+        const magnetR = baseMagnet * this.player.pickupRange;
+
         this.entities.coins.forEach(c => {
+            // Magnet Visual
+            let d = Math.hypot(c.x - this.player.x, c.y - this.player.y);
+            if (d < magnetR) {
+                this.ctx.save();
+                this.ctx.strokeStyle = 'rgba(250, 204, 21, 0.4)';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.player.x, this.player.y);
+                this.ctx.lineTo(c.x, c.y);
+                this.ctx.stroke();
+                this.ctx.restore();
+            }
+
             this.ctx.fillStyle = '#facc15'; this.ctx.beginPath(); this.ctx.arc(c.x, c.y, 8, 0, Math.PI * 2); this.ctx.fill();
             this.ctx.fillStyle = '#ca8a04'; this.ctx.fillText('$', c.x, c.y + 1);
         });
