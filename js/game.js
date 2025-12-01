@@ -488,6 +488,18 @@ class Game {
 
         this.player.x += this.player.vel.x;
         this.player.y += this.player.vel.y;
+
+        // Boundary constraints
+        // Horizontal bounds - keep player within screen width
+        const margin = 50; // Margin from edges
+        this.player.x = Math.max(margin, Math.min(window.innerWidth - margin, this.player.x));
+
+        // Vertical bounds - can only move upward (negative Y)
+        if (this.player.y > 0) {
+            this.player.y = 0; // Cannot go below starting position
+            this.player.vel.y = Math.min(0, this.player.vel.y); // Stop downward velocity
+        }
+
         this.camY = this.player.y - window.innerHeight / 2;
 
         if (this.player.skills.nitro.active) {
@@ -582,7 +594,10 @@ class Game {
 
         const cleanup = (arr) => {
             for (let i = arr.length - 1; i >= 0; i--) {
+                // Remove entities too far below
                 if (arr[i].y > this.player.y + window.innerHeight + 500) arr.splice(i, 1);
+                // Remove entities too far above
+                else if (arr[i].y < this.player.y - window.innerHeight - 500) arr.splice(i, 1);
             }
         };
         cleanup(this.entities.coins); cleanup(this.entities.mines); cleanup(this.entities.icebergs); cleanup(this.entities.whirlpools);
@@ -647,12 +662,26 @@ class Game {
     }
 
     checkCollisions() {
+        // Calculate viewport bounds
+        const viewportTop = this.player.y - window.innerHeight / 2 - 100; // Extra margin
+        const viewportBottom = this.player.y + window.innerHeight / 2 + 100;
+        const viewportLeft = this.player.x - window.innerWidth / 2 - 100;
+        const viewportRight = this.player.x + window.innerWidth / 2 + 100;
+
+        // Helper to check if entity is in viewport
+        const isVisible = (entity) => {
+            return entity.y > viewportTop && entity.y < viewportBottom &&
+                entity.x > viewportLeft && entity.x < viewportRight;
+        };
+
         const baseMagnet = this.player.isYacht ? 60 : 30;
         const magnetR = baseMagnet * this.player.pickupRange;
 
-        // Coins
+        // Coins - only check visible ones
         for (let i = this.entities.coins.length - 1; i >= 0; i--) {
             let c = this.entities.coins[i];
+            if (!isVisible(c)) continue; // Skip off-screen coins
+
             let d = Math.hypot(c.x - this.player.x, c.y - this.player.y);
             if (d < magnetR) {
                 c.x += (this.player.x - c.x) * 0.1; c.y += (this.player.y - c.y) * 0.1;
@@ -665,9 +694,11 @@ class Game {
         }
 
         if (this.player.invulnerable <= 0) {
-            // Mines
+            // Mines - only check visible ones
             for (let i = this.entities.mines.length - 1; i >= 0; i--) {
                 let m = this.entities.mines[i];
+                if (!isVisible(m)) continue; // Skip off-screen mines
+
                 let d = Math.hypot(m.x - this.player.x, m.y - this.player.y);
                 let hitDist = this.player.isYacht ? 35 : 15;
                 if (d < hitDist + m.r) {
@@ -675,9 +706,11 @@ class Game {
                     this.addExplosion(m.x, m.y); break;
                 }
             }
-            // Sharks
+            // Sharks - only check visible ones
             for (let i = this.entities.sharks.length - 1; i >= 0; i--) {
                 let s = this.entities.sharks[i];
+                if (!isVisible(s)) continue; // Skip off-screen sharks
+
                 let d = Math.hypot(s.x - this.player.x, s.y - this.player.y);
                 if (d < 30) {
                     this.handleHit(5, 'shark'); s.x -= Math.cos(s.angle) * 100; s.y -= Math.sin(s.angle) * 100; s.flee = 60; break;
@@ -685,11 +718,13 @@ class Game {
             }
             // Whirlpools
             this.entities.whirlpools.forEach(w => {
+                if (!isVisible(w)) return;
                 let d = Math.hypot(w.x - this.player.x, w.y - this.player.y);
                 if (d < 15) this.die("Затягнуло у вирву");
             });
             // Icebergs
             this.entities.icebergs.forEach(ice => {
+                if (!isVisible(ice)) return;
                 // Simple box collision
                 if (this.player.x > ice.x - ice.w / 2 && this.player.x < ice.x + ice.w / 2 &&
                     this.player.y > ice.y - ice.h / 2 && this.player.y < ice.y + ice.h / 2) {
@@ -700,7 +735,8 @@ class Game {
             });
             // Kraken
             this.entities.tentacles.forEach(t => {
-                if (t.active && Math.hypot(t.x - this.player.x, t.y - this.player.y) < 30) {
+                if (!t.active || !isVisible(t)) return;
+                if (Math.hypot(t.x - this.player.x, t.y - this.player.y) < 30) {
                     this.handleHit(8, 'kraken');
                     t.active = false;
                 }
