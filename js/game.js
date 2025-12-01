@@ -594,7 +594,7 @@ class Game {
         }
 
         if (this.entities.sharks.length < Math.floor(this.currentBiome.danger / 3) && Math.random() < 0.005) {
-            this.entities.sharks.push({ x: this.player.x + (Math.random() - 0.5) * window.innerWidth * 1.5, y: spawnY - 500, angle: 0, speed: 2.5 + (this.currentBiome.danger * 0.2), flee: 0 });
+            this.entities.sharks.push({ x: this.player.x + (Math.random() - 0.5) * window.innerWidth * 1.5, y: spawnY - 500, angle: 0, speed: 1.5 + (this.currentBiome.danger * 0.15), flee: 0 });
         }
 
         // Whirlpools (Rare)
