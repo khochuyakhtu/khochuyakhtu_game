@@ -627,7 +627,7 @@ class Game {
     }
 
     checkCollisions() {
-        const baseMagnet = this.player.isYacht ? 80 : 40;
+        const baseMagnet = this.player.isYacht ? 60 : 30;
         const magnetR = baseMagnet * this.player.pickupRange;
 
         // Coins
@@ -636,7 +636,7 @@ class Game {
             let d = Math.hypot(c.x - this.player.x, c.y - this.player.y);
             if (d < magnetR) {
                 c.x += (this.player.x - c.x) * 0.1; c.y += (this.player.y - c.y) * 0.1;
-                if (d < 30) {
+                if (d < 20) {
                     Sound.play('coin'); this.player.money += c.val;
                     this.showFloatText(`+$${c.val}`, c.x, c.y, '#4ade80');
                     this.entities.coins.splice(i, 1); this.updateUI();
@@ -649,7 +649,7 @@ class Game {
             for (let i = this.entities.mines.length - 1; i >= 0; i--) {
                 let m = this.entities.mines[i];
                 let d = Math.hypot(m.x - this.player.x, m.y - this.player.y);
-                let hitDist = this.player.isYacht ? 50 : 25;
+                let hitDist = this.player.isYacht ? 35 : 15;
                 if (d < hitDist + m.r) {
                     this.handleHit(m.lvl, 'mine'); this.entities.mines.splice(i, 1);
                     this.addExplosion(m.x, m.y); break;
@@ -659,14 +659,14 @@ class Game {
             for (let i = this.entities.sharks.length - 1; i >= 0; i--) {
                 let s = this.entities.sharks[i];
                 let d = Math.hypot(s.x - this.player.x, s.y - this.player.y);
-                if (d < 40) {
+                if (d < 30) {
                     this.handleHit(5, 'shark'); s.x -= Math.cos(s.angle) * 100; s.y -= Math.sin(s.angle) * 100; s.flee = 60; break;
                 }
             }
             // Whirlpools
             this.entities.whirlpools.forEach(w => {
                 let d = Math.hypot(w.x - this.player.x, w.y - this.player.y);
-                if (d < 20) this.die("Затягнуло у вирву");
+                if (d < 15) this.die("Затягнуло у вирву");
             });
             // Icebergs
             this.entities.icebergs.forEach(ice => {
@@ -680,7 +680,7 @@ class Game {
             });
             // Kraken
             this.entities.tentacles.forEach(t => {
-                if (t.active && Math.hypot(t.x - this.player.x, t.y - this.player.y) < 40) {
+                if (t.active && Math.hypot(t.x - this.player.x, t.y - this.player.y) < 30) {
                     this.handleHit(8, 'kraken');
                     t.active = false;
                 }
