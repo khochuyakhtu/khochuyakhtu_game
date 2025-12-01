@@ -291,6 +291,7 @@ class Game {
             if (e.key === '1') this.activateSkill('nitro');
             if (e.key === '2') this.activateSkill('flare');
             if (e.key === '3') this.activateSkill('repair');
+            if (e.key === '0') this.debug = !this.debug;
 
             // Arrow keys
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -377,10 +378,18 @@ class Game {
     startMission() {
         const dist = 3000 + Math.random() * 5000;
         const angle = -Math.PI / 2 + (Math.random() - 0.5); // Generally Up
+
+        let tx = this.player.x + Math.cos(angle) * dist;
+        let ty = this.player.y + Math.sin(angle) * dist;
+
+        // Clamp X to screen bounds
+        const margin = 50;
+        tx = Math.max(margin, Math.min(window.innerWidth - margin, tx));
+
         this.mission = {
             type: Math.random() > 0.5 ? 'delivery' : 'rescue',
-            tx: this.player.x + Math.cos(angle) * dist,
-            ty: this.player.y + Math.sin(angle) * dist,
+            tx: tx,
+            ty: ty,
             reward: 100 + Math.floor(Math.abs(this.player.y) / 100)
         };
 
@@ -444,12 +453,18 @@ class Game {
                 while (diff > Math.PI) diff -= Math.PI * 2;
                 this.player.angle += diff * 0.1;
 
-                if (this.gameTime % 5 === 0) {
+                // Wind particles when moving
+                if (this.gameTime % 3 === 0) {
+                    // Spawn particles behind the player (opposite to movement direction)
+                    const windX = this.player.x - Math.cos(angle) * 30;
+                    const windY = this.player.y - Math.sin(angle) * 30;
                     this.entities.particles.push({
-                        x: this.player.x - Math.cos(this.player.angle) * 20,
-                        y: this.player.y - Math.sin(this.player.angle) * 20,
-                        vx: (Math.random() - 0.5), vy: (Math.random() - 0.5),
-                        life: 40, r: Math.random() * 3 + 2, color: 'rgba(255,255,255,0.5)'
+                        x: windX + (Math.random() - 0.5) * 20,
+                        y: windY + (Math.random() - 0.5) * 20,
+                        vx: -Math.cos(angle) * 2 + (Math.random() - 0.5) * 2,
+                        vy: -Math.sin(angle) * 2 + (Math.random() - 0.5) * 2,
+                        life: 30, r: Math.random() * 4 + 2,
+                        color: 'rgba(200,220,255,0.6)' // Light blue wind
                     });
                 }
             }
@@ -471,12 +486,17 @@ class Game {
                 while (diff > Math.PI) diff -= Math.PI * 2;
                 this.player.angle += diff * 0.1;
 
-                if (this.gameTime % 5 === 0) {
+                // Wind particles for touch/joystick movement
+                if (this.gameTime % 3 === 0) {
+                    const windX = this.player.x - Math.cos(angle) * 30;
+                    const windY = this.player.y - Math.sin(angle) * 30;
                     this.entities.particles.push({
-                        x: this.player.x - Math.cos(this.player.angle) * 20,
-                        y: this.player.y - Math.sin(this.player.angle) * 20,
-                        vx: (Math.random() - 0.5), vy: (Math.random() - 0.5),
-                        life: 40, r: Math.random() * 3 + 2, color: 'rgba(255,255,255,0.5)'
+                        x: windX + (Math.random() - 0.5) * 20,
+                        y: windY + (Math.random() - 0.5) * 20,
+                        vx: -Math.cos(angle) * 2 + (Math.random() - 0.5) * 2,
+                        vy: -Math.sin(angle) * 2 + (Math.random() - 0.5) * 2,
+                        life: 30, r: Math.random() * 4 + 2,
+                        color: 'rgba(200,220,255,0.6)'
                     });
                 }
             } else {
@@ -688,14 +708,7 @@ class Game {
         // Coins - only check visible ones
         for (let i = this.entities.coins.length - 1; i >= 0; i--) {
             let c = this.entities.coins[i];
-            if (!isVisible(c)) {
-                // Debug: Log if invisible coin would have collided
-                let d = Math.hypot(c.x - this.player.x, c.y - this.player.y);
-                if (d < magnetR) {
-                    console.warn('⚠️ Invisible coin detected!', { x: c.x, y: c.y, playerX: this.player.x, playerY: this.player.y });
-                }
-                continue; // Skip off-screen coins
-            }
+            if (!isVisible(c)) continue; // Skip off-screen coins
 
             let d = Math.hypot(c.x - this.player.x, c.y - this.player.y);
             if (d < magnetR) {
@@ -709,43 +722,34 @@ class Game {
         }
 
         if (this.player.invulnerable <= 0) {
-            // Mines - only check visible ones
+            // Mines - Capsule Collision
             for (let i = this.entities.mines.length - 1; i >= 0; i--) {
                 let m = this.entities.mines[i];
-                if (!isVisible(m)) {
-                    // Debug: Log if invisible mine would have collided
-                    let d = Math.hypot(m.x - this.player.x, m.y - this.player.y);
-                    let hitDist = this.player.isYacht ? 35 : 15;
-                    if (d < hitDist + m.r) {
-                        console.error('🔴 INVISIBLE MINE HIT!', { x: m.x, y: m.y, playerX: this.player.x, playerY: this.player.y, distance: d });
-                    }
-                    continue; // Skip off-screen mines
-                }
+                if (!isVisible(m)) continue;
 
-                let d = Math.hypot(m.x - this.player.x, m.y - this.player.y);
-                let hitDist = this.player.isYacht ? 35 : 15;
-                if (d < hitDist + m.r) {
+                // Use capsule collision: Entity radius + Boat half-width (approx 15)
+                if (this.checkPlayerCollision(m, m.r + 15)) {
                     this.handleHit(m.lvl, 'mine'); this.entities.mines.splice(i, 1);
                     this.addExplosion(m.x, m.y); break;
                 }
             }
-            // Sharks - only check visible ones
+            // Sharks - Capsule Collision
             for (let i = this.entities.sharks.length - 1; i >= 0; i--) {
                 let s = this.entities.sharks[i];
-                if (!isVisible(s)) continue; // Skip off-screen sharks
+                if (!isVisible(s)) continue;
 
-                let d = Math.hypot(s.x - this.player.x, s.y - this.player.y);
-                if (d < 30) {
+                // Shark radius approx 20 + Boat half-width 15 = 35
+                if (this.checkPlayerCollision(s, 35)) {
                     this.handleHit(5, 'shark'); s.x -= Math.cos(s.angle) * 100; s.y -= Math.sin(s.angle) * 100; s.flee = 60; break;
                 }
             }
-            // Whirlpools
+            // Whirlpools - Center point check is fine (large radius)
             this.entities.whirlpools.forEach(w => {
                 if (!isVisible(w)) return;
                 let d = Math.hypot(w.x - this.player.x, w.y - this.player.y);
                 if (d < 15) this.die("Затягнуло у вирву");
             });
-            // Icebergs
+            // Icebergs - Box Collision (Keep as is or improve, but box is fine for rect)
             this.entities.icebergs.forEach(ice => {
                 if (!isVisible(ice)) return;
                 // Simple box collision
@@ -765,6 +769,54 @@ class Game {
                 }
             });
         }
+    }
+
+    // Capsule Collision Detection
+    // Checks distance from entity point to the boat's line segment (spine)
+    checkPlayerCollision(entity, hitDist) {
+        // If player is just a Donut (not a Yacht), use simple circle collision
+        if (!this.player.isYacht) {
+            const distSq = (entity.x - this.player.x) ** 2 + (entity.y - this.player.y) ** 2;
+            // Donut is small (~40px visual), so hitDist should be small. 
+            // We use the passed hitDist which includes entity radius + margin.
+            // For donut, margin should be smaller (e.g. 20px radius total).
+            // Let's assume hitDist passed is (EntityR + 15). 
+            // We'll use that directly as it approximates (EntityR + DonutR).
+            return distSq < hitDist * hitDist;
+        }
+
+        // Boat dimensions
+        const boatLen = 80; // Total length
+        const halfLen = boatLen / 2;
+
+        // Boat spine start and end points (relative to center, rotated)
+        // Angle is -PI/2 (up) by default.
+        const cos = Math.cos(this.player.angle);
+        const sin = Math.sin(this.player.angle);
+
+        // Tip of the boat
+        const x1 = this.player.x + cos * halfLen;
+        const y1 = this.player.y + sin * halfLen;
+
+        // Rear of the boat
+        const x2 = this.player.x - cos * halfLen;
+        const y2 = this.player.y - sin * halfLen;
+
+        // Vector from p1 to p2
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+
+        // Project point onto line segment (clamped 0..1)
+        const t = ((entity.x - x1) * dx + (entity.y - y1) * dy) / (dx * dx + dy * dy);
+        const tClamped = Math.max(0, Math.min(1, t));
+
+        // Closest point on segment
+        const closestX = x1 + tClamped * dx;
+        const closestY = y1 + tClamped * dy;
+
+        // Distance check
+        const distSq = (entity.x - closestX) ** 2 + (entity.y - closestY) ** 2;
+        return distSq < hitDist * hitDist;
     }
 
     handleHit(lvl, type) {
@@ -1015,9 +1067,57 @@ class Game {
         }
         this.ctx.restore();
 
-        // Night Overlay
+        // Enhanced Night Overlay
         if (p < 0.2 || p > 0.8) {
-            this.ctx.fillStyle = 'rgba(0,0,0,0.6)'; this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            // Darker night overlay with gradient
+            const nightIntensity = p < 0.2 ? (0.2 - p) / 0.2 : (p - 0.8) / 0.2;
+
+            // Dark overlay
+            this.ctx.fillStyle = `rgba(0,5,20,${0.7 * nightIntensity})`;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Stars
+            this.ctx.save();
+            this.ctx.globalAlpha = nightIntensity;
+            for (let i = 0; i < 100; i++) {
+                const seed = i * 137.5; // Use golden angle for distribution
+                const starX = ((seed * 123.456) % this.canvas.width);
+                const starY = ((seed * 789.012 + this.camY * 0.1) % this.canvas.height);
+                const brightness = 0.5 + (Math.sin(this.gameTime * 0.05 + i) * 0.5 + 0.5) * 0.5;
+
+                this.ctx.fillStyle = `rgba(255,255,255,${brightness})`;
+                this.ctx.fillRect(starX, starY, 2, 2);
+            }
+
+            // Moon when in deep night
+            if (nightIntensity > 0.5) {
+                const moonX = this.canvas.width - 150;
+                const moonY = 100;
+
+                // Moon glow
+                const gradient = this.ctx.createRadialGradient(moonX, moonY, 20, moonX, moonY, 60);
+                gradient.addColorStop(0, 'rgba(255,255,230,0.3)');
+                gradient.addColorStop(1, 'rgba(255,255,230,0)');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(moonX - 60, moonY - 60, 120, 120);
+
+                // Moon itself
+                this.ctx.fillStyle = 'rgba(240,240,220,0.9)';
+                this.ctx.beginPath();
+                this.ctx.arc(moonX, moonY, 25, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Moon craters
+                this.ctx.fillStyle = 'rgba(200,200,180,0.3)';
+                this.ctx.beginPath();
+                this.ctx.arc(moonX - 8, moonY - 5, 6, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.beginPath();
+                this.ctx.arc(moonX + 10, moonY + 8, 4, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            this.ctx.restore();
         }
 
         // Radar UI Indicators
@@ -1078,7 +1178,6 @@ class Game {
             this.entities.particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8, life: 40, r: Math.random() * 6 + 2, color: Math.random() > 0.5 ? '#f87171' : '#facc15' });
         }
     }
-
     showFloatText(text, x, y, color) {
         let el = document.createElement('div');
         el.className = 'absolute font-bold text-shadow pointer-events-none transition-all duration-1000 ease-out z-50';
@@ -1091,6 +1190,7 @@ class Game {
     loop() {
         if (!this.paused) this.update();
         this.draw();
+        this.drawDebug();
         requestAnimationFrame(() => this.loop());
     }
 
@@ -1258,4 +1358,4 @@ class Game {
     }
 }
 
-const game = new Game();
+// const game = new Game(); // Removed auto-init
