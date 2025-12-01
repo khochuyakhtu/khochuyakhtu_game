@@ -594,13 +594,21 @@ class Game {
 
         const cleanup = (arr) => {
             for (let i = arr.length - 1; i >= 0; i--) {
-                // Remove entities too far below
-                if (arr[i].y > this.player.y + window.innerHeight + 500) arr.splice(i, 1);
-                // Remove entities too far above
-                else if (arr[i].y < this.player.y - window.innerHeight - 500) arr.splice(i, 1);
+                const distY = Math.abs(arr[i].y - this.player.y);
+                const distX = Math.abs(arr[i].x - this.player.x);
+
+                // Remove if too far vertically OR horizontally
+                if (distY > window.innerHeight + 300 || distX > window.innerWidth + 300) {
+                    arr.splice(i, 1);
+                }
             }
         };
         cleanup(this.entities.coins); cleanup(this.entities.mines); cleanup(this.entities.icebergs); cleanup(this.entities.whirlpools);
+
+        // Debug: Log entity counts
+        if (this.gameTime % 60 === 0) {
+            console.log(`Entities - Coins: ${this.entities.coins.length}, Mines: ${this.entities.mines.length}`);
+        }
     }
 
     spawnKraken() {
@@ -680,7 +688,14 @@ class Game {
         // Coins - only check visible ones
         for (let i = this.entities.coins.length - 1; i >= 0; i--) {
             let c = this.entities.coins[i];
-            if (!isVisible(c)) continue; // Skip off-screen coins
+            if (!isVisible(c)) {
+                // Debug: Log if invisible coin would have collided
+                let d = Math.hypot(c.x - this.player.x, c.y - this.player.y);
+                if (d < magnetR) {
+                    console.warn('⚠️ Invisible coin detected!', { x: c.x, y: c.y, playerX: this.player.x, playerY: this.player.y });
+                }
+                continue; // Skip off-screen coins
+            }
 
             let d = Math.hypot(c.x - this.player.x, c.y - this.player.y);
             if (d < magnetR) {
@@ -697,7 +712,15 @@ class Game {
             // Mines - only check visible ones
             for (let i = this.entities.mines.length - 1; i >= 0; i--) {
                 let m = this.entities.mines[i];
-                if (!isVisible(m)) continue; // Skip off-screen mines
+                if (!isVisible(m)) {
+                    // Debug: Log if invisible mine would have collided
+                    let d = Math.hypot(m.x - this.player.x, m.y - this.player.y);
+                    let hitDist = this.player.isYacht ? 35 : 15;
+                    if (d < hitDist + m.r) {
+                        console.error('🔴 INVISIBLE MINE HIT!', { x: m.x, y: m.y, playerX: this.player.x, playerY: this.player.y, distance: d });
+                    }
+                    continue; // Skip off-screen mines
+                }
 
                 let d = Math.hypot(m.x - this.player.x, m.y - this.player.y);
                 let hitDist = this.player.isYacht ? 35 : 15;
