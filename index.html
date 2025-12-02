@@ -415,49 +415,87 @@
                 </div>
             </div>
         </div>
-        <div id="tab-crew" class="hidden flex-col gap-4">
+        <div id="tab-crew" class="hidden flex-col gap-3 overflow-y-auto" style="max-height: 70vh;">
             <h3 class="text-slate-300 text-sm uppercase tracking-wider font-bold">Найняти Екіпаж</h3>
+
+            <!-- Mechanic -->
             <div class="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700">
                 <div class="text-3xl">👨‍🔧</div>
                 <div class="flex-grow">
                     <div class="font-bold text-white">Механік</div>
-                    <div class="text-[10px] text-slate-400">Повільно лагодить пошкоджену броню</div>
-                </div><button id="hire-mech"
+                    <div class="text-[10px] text-slate-400">Повільно відновлює температуру (+0.1°C/сек)</div>
+                    <div id="level-mechanic" class="text-[9px] text-green-400"></div>
+                </div>
+                <button id="hire-mechanic"
                     class="bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-2 rounded font-bold"
                     onclick="game.hireCrew('mechanic')">$500</button>
             </div>
+
+            <!-- Navigator -->
             <div class="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700">
                 <div class="text-3xl">🧭</div>
                 <div class="flex-grow">
                     <div class="font-bold text-white">Штурман</div>
                     <div class="text-[10px] text-slate-400">Збільшує огляд радара на 50%</div>
-                </div><button id="hire-nav"
+                    <div id="level-navigator" class="text-[9px] text-green-400"></div>
+                </div>
+                <button id="hire-navigator"
                     class="bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-2 rounded font-bold"
                     onclick="game.hireCrew('navigator')">$500</button>
             </div>
-            <p class="text-[10px] text-slate-500 text-center mt-4">Екіпаж залишається з вами назавжди.</p>
-        </div>
-    </div>
 
-    <!-- Game Over Screen -->
-    <div id="game-over-modal" class="ui-layer modal interactive hidden flex items-center justify-center z-50">
-        <div
-            class="bg-slate-900 border border-red-900/50 p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full relative">
-            <div class="text-6xl mb-2" id="go-emoji">💀</div>
-            <h2 class="text-2xl font-bold text-white mb-2" id="go-title">Game Over</h2>
-            <p class="text-sm text-slate-400 mb-6" id="go-reason">...</p>
-            <div class="bg-black/40 p-3 rounded mb-6">
-                <div class="text-[10px] text-slate-500 uppercase">Збережений Бюджет</div>
-                <div class="text-2xl font-mono text-green-400" id="final-score">0</div>
+            <!-- Doctor -->
+            <div class="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700">
+                <div class="text-3xl">👨‍⚕️</div>
+                <div class="flex-grow">
+                    <div class="font-bold text-white">Лікар</div>
+                    <div class="text-[10px] text-slate-400">Резистентність до холоду (+3°C/рівень) | Шанс уникнути
+                        смерті (10%/рівень)</div>
+                    <div id="level-doctor" class="text-[9px] text-green-400"></div>
+                </div>
+                <button id="hire-doctor"
+                    class="bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-2 rounded font-bold"
+                    onclick="game.hireCrew('doctor')">$500</button>
             </div>
-            <button onclick="game.respawn()"
-                class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-lg shadow-lg">Відродитися</button>
-            <button onclick="game.hardReset()" class="mt-2 text-xs text-slate-500 hover:text-red-400">Скинути
-                прогрес</button>
-        </div>
-    </div>
 
-    <script type="module" src="js/game.js"></script>
+            <!-- Merchant -->
+            <div class="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700">
+                <div class="text-3xl">💼</div>
+                <div class="flex-grow">
+                    <div class="font-bold text-white">Торговець</div>
+                    <div class="text-[10px] text-slate-400">Знижує ціни в магазині (5%/рівень, макс 25%)</div>
+                    <div id="level-merchant" class="text-[9px] text-green-400"></div>
+                </div>
+                <button id="hire-merchant"
+                    class="bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-2 rounded font-bold"
+                    onclick="game.hireCrew('merchant')">$500</button>
+            </div>
+
+            <!-- Gunner -->
+            <div class="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700">
+                <div class="text-3xl">🔫</div>
+                <div class="flex-grow">
+                    <!-- Game Over Screen -->
+                    <div id="game-over-modal"
+                        class="ui-layer modal interactive hidden flex items-center justify-center z-50">
+                        <div
+                            class="bg-slate-900 border border-red-900/50 p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full relative">
+                            <div class="text-6xl mb-2" id="go-emoji">💀</div>
+                            <h2 class="text-2xl font-bold text-white mb-2" id="go-title">Game Over</h2>
+                            <p class="text-sm text-slate-400 mb-6" id="go-reason">...</p>
+                            <div class="bg-black/40 p-3 rounded mb-6">
+                                <div class="text-[10px] text-slate-500 uppercase">Збережений Бюджет</div>
+                                <div class="text-2xl font-mono text-green-400" id="final-score">0</div>
+                            </div>
+                            <button onclick="game.respawn()"
+                                class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-lg shadow-lg">Відродитися</button>
+                            <button onclick="game.hardReset()"
+                                class="mt-2 text-xs text-slate-500 hover:text-red-400">Скинути
+                                прогрес</button>
+                        </div>
+                    </div>
+
+                    <script type="module" src="js/game.js"></script>
 </body>
 
 </html>

@@ -24,20 +24,33 @@ export class UIManager {
     }
 
     updateCrewUI(player) {
-        // Mechanic
-        const mechBtn = document.getElementById('hire-mech');
-        if (player.crew.mechanic) {
-            mechBtn.innerText = "НАЙНЯТО"; mechBtn.className = "bg-slate-600 text-slate-400 text-xs px-3 py-2 rounded font-bold cursor-default";
-        } else {
-            mechBtn.innerText = "$500"; mechBtn.className = "bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-2 rounded font-bold";
-        }
-        // Navigator
-        const navBtn = document.getElementById('hire-nav');
-        if (player.crew.navigator) {
-            navBtn.innerText = "НАЙНЯТО"; navBtn.className = "bg-slate-600 text-slate-400 text-xs px-3 py-2 rounded font-bold cursor-default";
-        } else {
-            navBtn.innerText = "$500"; navBtn.className = "bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-2 rounded font-bold";
-        }
+        const crewTypes = ['mechanic', 'navigator', 'doctor', 'merchant', 'gunner'];
+
+        crewTypes.forEach(type => {
+            const btn = document.getElementById(`hire-${type}`);
+            const levelDisplay = document.getElementById(`level-${type}`);
+            const crewMember = player.crew[type];
+
+            if (!btn) return; // Skip if button doesn't exist yet
+
+            if (!crewMember.hired) {
+                btn.innerText = "$500";
+                btn.className = "bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-2 rounded font-bold";
+                btn.disabled = false;
+                if (levelDisplay) levelDisplay.innerText = "";
+            } else if (crewMember.level < 5) {
+                const upgradeCost = CONFIG.crewUpgradeCosts[crewMember.level];
+                btn.innerText = `↑ $${upgradeCost}`;
+                btn.className = "bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-2 rounded font-bold";
+                btn.disabled = false;
+                if (levelDisplay) levelDisplay.innerText = `Рівень ${crewMember.level}`;
+            } else {
+                btn.innerText = "МАКС";
+                btn.className = "bg-slate-600 text-slate-400 text-xs px-3 py-2 rounded font-bold cursor-default";
+                btn.disabled = true;
+                if (levelDisplay) levelDisplay.innerText = `Рівень ${crewMember.level}`;
+            }
+        });
     }
 
     renderInventory(game) {

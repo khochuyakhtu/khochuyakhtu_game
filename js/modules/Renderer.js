@@ -253,7 +253,7 @@ export class Renderer {
         if (player.isYacht && equip.radar) {
             this.ctx.save();
             let radarMax = 300 + (player.radarRange * 500);
-            if (player.crew.navigator) radarMax *= 1.5;
+            if (player.crew.navigator.hired) radarMax *= 1.5;
 
             // Mines dots
             entities.mines.forEach(m => {

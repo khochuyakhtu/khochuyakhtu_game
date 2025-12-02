@@ -50,7 +50,14 @@ class Game {
             x: window.innerWidth / 2, y: 0, angle: -Math.PI / 2, vel: { x: 0, y: 0 },
             money: 0, bodyTemp: 36.6, armorLvl: 0, heatResist: 0, pickupRange: 1, radarRange: 0,
             speedMult: 1, isYacht: false, isDead: false, invulnerable: 0,
-            crew: { mechanic: false, navigator: false },
+            crew: {
+                mechanic: { hired: false, level: 0 },
+                navigator: { hired: false, level: 0 },
+                doctor: { hired: false, level: 0 },
+                merchant: { hired: false, level: 0 },
+                gunner: { hired: false, level: 0 }
+            },
+            gunner: { lastShot: 0 },
             skills: {
                 nitro: { active: false, cd: 0, max: 600, timer: 0 },
                 flare: { cd: 0, max: 1800 },
@@ -345,7 +352,14 @@ class Game {
         let ambientTemp = this.currentBiome.temp;
         if (!this.player.isYacht) ambientTemp -= 5;
         if (this.dayPhase > 0.75 || this.dayPhase < 0.25) ambientTemp -= 5;
-        let feltTemp = ambientTemp + (this.player.heatResist * 5);
+
+        // Doctor cold resistance
+        let coldResist = 0;
+        if (this.player.crew.doctor.hired) {
+            coldResist = this.player.crew.doctor.level * 3; // +3°C per level
+        }
+
+        let feltTemp = ambientTemp + (this.player.heatResist * 5) + coldResist;
         if (feltTemp < 30) {
             let lossRate = (30 - feltTemp) * 0.0001;
             this.player.bodyTemp -= lossRate;
@@ -368,6 +382,14 @@ class Game {
 
         if (this.player.invulnerable > 0) this.player.invulnerable--;
 
+        // Gunner auto-shoot
+        if (this.player.crew.gunner.hired && this.player.isYacht) {
+            const shootInterval = 180 - (this.player.crew.gunner.level * 30); // 3s to 0.5s (180 frames to 30 frames)
+            if (this.gameTime - this.player.gunner.lastShot > shootInterval) {
+                this.gunnerShoot();
+            }
+        }
+
         this.passiveEffects();
         this.ui.updateUI(this);
     }
@@ -375,7 +397,7 @@ class Game {
     passiveEffects() {
         if (this.player.isDead || this.paused) return;
         // Mechanic
-        if (this.player.crew.mechanic) {
+        if (this.player.crew.mechanic.hired) {
             if (this.player.bodyTemp < 36.6 && this.player.bodyTemp > 30) {
                 this.player.bodyTemp += 0.1;
                 this.ui.updateUI(this);
@@ -405,6 +427,58 @@ class Game {
             this.entities.sharks.forEach(s => s.flee = 300);
             this.entities.tentacles.forEach(t => t.active = false); // Scare Kraken
             this.ui.showFloatText("🧨 FLARE!", this.player.x, this.player.y, '#f87171', this.camY);
+        }
+    }
+
+    gunnerShoot() {
+        const range = 300;
+        let target = null;
+        let minDist = range;
+
+        // Find closest mine
+        this.entities.mines.forEach((m, idx) => {
+            const d = Math.hypot(m.x - this.player.x, m.y - this.player.y);
+            if (d < minDist) {
+                minDist = d;
+                target = { entity: m, type: 'mine', index: idx };
+            }
+        });
+
+        // Find closest shark
+        this.entities.sharks.forEach((s, idx) => {
+            const d = Math.hypot(s.x - this.player.x, s.y - this.player.y);
+            if (d < minDist) {
+                minDist = d;
+                target = { entity: s, type: 'shark', index: idx };
+            }
+        });
+
+        if (target) {
+            Sound.play('skill');
+
+            // Create bullet particle
+            this.entities.particles.push({
+                x: this.player.x,
+                y: this.player.y,
+                vx: (target.entity.x - this.player.x) / 10,
+                vy: (target.entity.y - this.player.y) / 10,
+                life: 10,
+                r: 3,
+                color: 'rgba(255, 200, 0, 1)'
+            });
+
+            if (target.type === 'mine') {
+                if (target.entity.lvl > 1) {
+                    target.entity.lvl -= 1;
+                } else {
+                    this.entities.mines.splice(target.index, 1);
+                    this.entityManager.addExplosion(target.entity.x, target.entity.y, this.entities);
+                }
+            } else if (target.type === 'shark') {
+                target.entity.flee = 300;
+            }
+
+            this.player.gunner.lastShot = this.gameTime;
         }
     }
 
@@ -552,6 +626,18 @@ class Game {
     }
 
     die(reason) {
+        // Doctor death avoidance chance
+        if (this.player.crew.doctor.hired) {
+            const avoidChance = this.player.crew.doctor.level * 0.10; // 10% per level
+            if (Math.random() < avoidChance) {
+                this.player.bodyTemp = 36.6;
+                this.player.invulnerable = 180;
+                this.ui.showFloatText("💊 ЛІКАР ВРЯТУВАВ!", this.player.x, this.player.y, '#4ade80', this.camY);
+                Sound.play('buy');
+                return;
+            }
+        }
+
         this.player.isDead = true;
         this.saveScore(this.player.money); // Save score on death
         document.getElementById('game-over-modal').classList.remove('hidden');
@@ -569,7 +655,14 @@ class Game {
         this.player.money = 0; // Reset Money
         this.inventory = Array(10).fill(null); // Reset Inventory
         this.equip = { hull: null, engine: null, cabin: null, magnet: null, radar: null }; // Reset Equip
-        this.player.crew = { mechanic: false, navigator: false }; // Reset Crew
+        this.player.crew = {
+            mechanic: { hired: false, level: 0 },
+            navigator: { hired: false, level: 0 },
+            doctor: { hired: false, level: 0 },
+            merchant: { hired: false, level: 0 },
+            gunner: { hired: false, level: 0 }
+        }; // Reset Crew
+        this.player.gunner = { lastShot: 0 };
         this.recalcStats();
 
         this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [] };
@@ -672,13 +765,31 @@ class Game {
     }
 
     hireCrew(type) {
-        if (this.player.money >= 500 && !this.player.crew[type]) {
-            Sound.play('buy');
-            this.player.money -= 500;
-            this.player.crew[type] = true;
-            this.ui.updateCrewUI(this.player);
-            this.ui.updateUI(this);
-            this.saveGame();
+        const crewMember = this.player.crew[type];
+        let cost = 500;
+
+        if (!crewMember.hired) {
+            // Initial hire
+            if (this.player.money >= cost) {
+                Sound.play('buy');
+                this.player.money -= cost;
+                crewMember.hired = true;
+                crewMember.level = 1;
+                this.ui.updateCrewUI(this.player);
+                this.ui.updateUI(this);
+                this.saveGame();
+            }
+        } else if (crewMember.level < 5) {
+            // Upgrade
+            cost = CONFIG.crewUpgradeCosts[crewMember.level]; // Index matches next level cost
+            if (this.player.money >= cost) {
+                Sound.play('buy');
+                this.player.money -= cost;
+                crewMember.level++;
+                this.ui.updateCrewUI(this.player);
+                this.ui.updateUI(this);
+                this.saveGame();
+            }
         }
     }
 
@@ -687,12 +798,19 @@ class Game {
     }
 
     buyItem(type) {
+        let cost = CONFIG.baseCost;
 
-        if (this.player.money >= CONFIG.baseCost) {
+        // Merchant discount
+        if (this.player.crew.merchant.hired) {
+            const discount = this.player.crew.merchant.level * 0.05; // 5% per level
+            cost = Math.floor(cost * (1 - discount));
+        }
+
+        if (this.player.money >= cost) {
             let emptyIdx = this.inventory.findIndex(e => e === null);
             if (emptyIdx > -1) {
                 Sound.play('buy');
-                this.player.money -= CONFIG.baseCost;
+                this.player.money -= cost;
                 this.inventory[emptyIdx] = { type: type, tier: 0, id: Math.random() };
                 this.ui.updateUI(this); this.ui.renderInventory(this); this.saveGame();
             }
