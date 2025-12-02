@@ -100,10 +100,64 @@ class Game {
             document.getElementById('main-menu').style.display = 'flex';
         };
 
-        document.getElementById('reset-progress-btn').onclick = () => {
-            if (confirm('Ви впевнені, що хочете скинути весь прогрес?')) {
-                this.hardReset();
+        // Settings
+        this.settings = {
+            nickname: localStorage.getItem('yacht_nickname') || 'Captain',
+            sound: localStorage.getItem('yacht_sound') !== 'false', // Default true
+            vibration: localStorage.getItem('yacht_vibration') !== 'false' // Default true
+        };
+
+        // Apply initial settings
+        Sound.enabled = this.settings.sound;
+        document.getElementById('nickname-input').value = this.settings.nickname;
+        document.getElementById('sound-toggle').checked = this.settings.sound;
+        document.getElementById('vibration-toggle').checked = this.settings.vibration;
+        document.getElementById('audio-btn').style.opacity = Sound.enabled ? '1' : '0.5';
+
+        // Settings Listeners
+        document.getElementById('settings-btn').onclick = () => {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('settings-screen').style.display = 'flex';
+        };
+        document.getElementById('back-from-settings-btn').onclick = () => {
+            document.getElementById('settings-screen').style.display = 'none';
+            document.getElementById('main-menu').style.display = 'flex';
+        };
+
+        document.getElementById('save-nickname-btn').onclick = () => {
+            const newNick = document.getElementById('nickname-input').value.trim();
+            if (newNick) {
+                this.settings.nickname = newNick;
+                localStorage.setItem('yacht_nickname', newNick);
+                alert('Нікнейм збережено!');
             }
+        };
+
+        document.getElementById('sound-toggle').onchange = (e) => {
+            this.settings.sound = e.target.checked;
+            Sound.enabled = this.settings.sound;
+            localStorage.setItem('yacht_sound', this.settings.sound);
+            document.getElementById('audio-btn').style.opacity = Sound.enabled ? '1' : '0.5';
+            if (this.settings.sound && !Sound.ctx) Sound.init();
+        };
+
+        // Leaderboard
+        this.leaderboard = JSON.parse(localStorage.getItem('yacht_leaderboard')) || [];
+
+        document.getElementById('leaderboard-btn').onclick = () => {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('leaderboard-screen').style.display = 'flex';
+            this.renderLeaderboard();
+        };
+
+        document.getElementById('back-from-leaderboard-btn').onclick = () => {
+            document.getElementById('leaderboard-screen').style.display = 'none';
+            document.getElementById('main-menu').style.display = 'flex';
+        };
+
+        document.getElementById('vibration-toggle').onchange = (e) => {
+            this.settings.vibration = e.target.checked;
+            localStorage.setItem('yacht_vibration', this.settings.vibration);
         };
 
         // Subscription
@@ -416,7 +470,7 @@ class Game {
         Sound.play('explode');
         document.body.style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
         setTimeout(() => document.body.style.transform = 'none', 200);
-        Haptics.impact('heavy');
+        if (this.settings.vibration) Haptics.impact('heavy');
 
         if (!this.player.isYacht) { this.die(type === 'shark' ? "З'їдений акулою" : "Знищено"); return; }
 
@@ -445,6 +499,7 @@ class Game {
 
     die(reason) {
         this.player.isDead = true;
+        this.saveScore(this.player.money); // Save score on death
         document.getElementById('game-over-modal').classList.remove('hidden');
         document.getElementById('go-reason').innerText = reason;
         document.getElementById('final-score').innerText = `$${this.player.money}`;
@@ -623,6 +678,53 @@ class Game {
         if (this.equip.radar) this.player.radarRange = 1 + (this.equip.radar.tier * 0.5);
 
         this.ui.updateUI(this);
+    }
+
+    saveScore(score) {
+        const newEntry = {
+            name: this.settings.nickname,
+            score: score,
+            date: new Date().toLocaleDateString()
+        };
+
+        this.leaderboard.push(newEntry);
+        this.leaderboard.sort((a, b) => b.score - a.score);
+        this.leaderboard = this.leaderboard.slice(0, 10);
+
+        localStorage.setItem('yacht_leaderboard', JSON.stringify(this.leaderboard));
+    }
+
+    renderLeaderboard() {
+        const list = document.getElementById('leaderboard-list');
+        list.innerHTML = '';
+
+        if (this.leaderboard.length === 0) {
+            list.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Поки що немає результатів. Станьте першим!</div>';
+            return;
+        }
+
+        this.leaderboard.forEach((entry, index) => {
+            const item = document.createElement('div');
+            item.style.cssText = 'background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255, 255, 255, 0.1);';
+
+            let medal = '';
+            if (index === 0) medal = '🥇 ';
+            else if (index === 1) medal = '🥈 ';
+            else if (index === 2) medal = '🥉 ';
+            else medal = `#${index + 1} `;
+
+            item.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">${medal}</span>
+                    <span style="font-weight: bold; color: white; font-size: 16px;">${entry.name}</span>
+                </div>
+                <div style="text-align: right;">
+                    <div style="color: #4ade80; font-weight: bold; font-family: monospace; font-size: 18px;">$${entry.score}</div>
+                    <div style="color: #64748b; font-size: 10px;">${entry.date}</div>
+                </div>
+            `;
+            list.appendChild(item);
+        });
     }
 }
 
