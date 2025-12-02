@@ -13,6 +13,16 @@ export class EntityManager {
             entities.coins.push({ x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5, y: spawnY + Math.random() * 500, val: CONFIG.moneyValue });
         }
 
+        // Coffee (Temperature boost)
+        if (entities.coffee.length < 3 && Math.random() < 0.03) {
+            entities.coffee.push({ x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5, y: spawnY + Math.random() * 500 });
+        }
+
+        // Repair Kits (Restore temperature)
+        if (entities.repairKits.length < 2 && Math.random() < 0.015) {
+            entities.repairKits.push({ x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5, y: spawnY + Math.random() * 500 });
+        }
+
         // Mines
         if (entities.mines.length < 5 + currentBiome.danger && Math.random() < 0.02) {
             let minLvl = Math.max(0, currentBiome.danger - 2);
@@ -41,6 +51,8 @@ export class EntityManager {
         }
 
         this.cleanup(entities.coins, player);
+        this.cleanup(entities.coffee, player);
+        this.cleanup(entities.repairKits, player);
         this.cleanup(entities.mines, player);
         this.cleanup(entities.icebergs, player);
         this.cleanup(entities.whirlpools, player);

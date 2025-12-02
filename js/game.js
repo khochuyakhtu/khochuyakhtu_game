@@ -62,7 +62,7 @@ class Game {
         this.equip = { hull: null, engine: null, cabin: null, magnet: null, radar: null };
         this.selectedSlot = null;
 
-        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [] };
+        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [] };
         this.currentBiome = CONFIG.biomes[0];
 
         // Listeners
@@ -420,6 +420,40 @@ class Game {
             }
         }
 
+        // Coffee - temperature boost
+        for (let i = this.entities.coffee.length - 1; i >= 0; i--) {
+            let coffee = this.entities.coffee[i];
+            if (!isVisible(coffee)) continue;
+
+            let d = Math.hypot(coffee.x - this.player.x, coffee.y - this.player.y);
+            if (d < magnetR) {
+                coffee.x += (this.player.x - coffee.x) * 0.1; coffee.y += (this.player.y - coffee.y) * 0.1;
+                if (d < 20) {
+                    Sound.play('coin');
+                    this.player.bodyTemp = Math.min(37, this.player.bodyTemp + 2);
+                    this.ui.showFloatText(`☕ +2°C`, coffee.x, coffee.y, '#f59e0b', this.camY);
+                    this.entities.coffee.splice(i, 1); this.ui.updateUI(this);
+                }
+            }
+        }
+
+        // Repair Kits - full temperature restore
+        for (let i = this.entities.repairKits.length - 1; i >= 0; i--) {
+            let kit = this.entities.repairKits[i];
+            if (!isVisible(kit)) continue;
+
+            let d = Math.hypot(kit.x - this.player.x, kit.y - this.player.y);
+            if (d < magnetR) {
+                kit.x += (this.player.x - kit.x) * 0.1; kit.y += (this.player.y - kit.y) * 0.1;
+                if (d < 20) {
+                    Sound.play('buy');
+                    this.player.bodyTemp = 36.6;
+                    this.ui.showFloatText(`🔧 Температура відновлена!`, kit.x, kit.y, '#10b981', this.camY);
+                    this.entities.repairKits.splice(i, 1); this.ui.updateUI(this);
+                }
+            }
+        }
+
         if (this.player.invulnerable <= 0) {
             // Mines - Capsule Collision
             for (let i = this.entities.mines.length - 1; i >= 0; i--) {
@@ -518,7 +552,7 @@ class Game {
         this.player.crew = { mechanic: false, navigator: false }; // Reset Crew
         this.recalcStats();
 
-        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [] };
+        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [] };
         document.getElementById('game-over-modal').classList.add('hidden');
         this.startMission();
         this.saveGame();
@@ -601,7 +635,7 @@ class Game {
 
     startMission() {
         let dist = 5000 + Math.random() * 5000;
-        let angle = Math.PI / 2 + (Math.random() - 0.5); // Downwards
+        let angle = -Math.PI / 2 + (Math.random() - 0.5); // Upwards (player swims up, so mission should be above)
         this.mission = {
             tx: this.player.x + Math.cos(angle) * dist,
             ty: this.player.y + Math.sin(angle) * dist,

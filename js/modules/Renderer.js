@@ -163,6 +163,54 @@ export class Renderer {
             this.ctx.fillStyle = '#ca8a04'; this.ctx.fillText('$', c.x, c.y + 1);
         });
 
+        // Coffee
+        entities.coffee.forEach(coffee => {
+            if (!isVisible(coffee)) return;
+
+            // Magnet Visual
+            let d = Math.hypot(coffee.x - player.x, coffee.y - player.y);
+            if (d < magnetR) {
+                this.ctx.save();
+                this.ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                this.ctx.moveTo(player.x, player.y);
+                this.ctx.lineTo(coffee.x, coffee.y);
+                this.ctx.stroke();
+                this.ctx.restore();
+            }
+
+            this.ctx.font = "20px Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            this.ctx.fillText("☕", coffee.x, coffee.y);
+        });
+
+        // Repair Kits
+        entities.repairKits.forEach(kit => {
+            if (!isVisible(kit)) return;
+
+            // Magnet Visual
+            let d = Math.hypot(kit.x - player.x, kit.y - player.y);
+            if (d < magnetR) {
+                this.ctx.save();
+                this.ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                this.ctx.moveTo(player.x, player.y);
+                this.ctx.lineTo(kit.x, kit.y);
+                this.ctx.stroke();
+                this.ctx.restore();
+            }
+
+            this.ctx.font = "20px Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            this.ctx.fillText("🔧", kit.x, kit.y);
+        });
+
         // Player
         this.ctx.translate(player.x, player.y);
         this.ctx.rotate(player.angle + Math.PI / 2);
