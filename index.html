@@ -98,9 +98,43 @@
             <button id="settings-btn"
                 style="width: 100%; background: rgba(15, 23, 42, 0.8); color: white; font-size: 18px; font-weight: bold; padding: 14px 32px; border: 1px solid #334155; border-radius: 12px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.3); margin-bottom: 16px;">⚙️
                 Налаштування</button>
+            <button id="saves-btn"
+                style="width: 100%; background: rgba(15, 23, 42, 0.8); color: #60a5fa; font-size: 18px; font-weight: bold; padding: 14px 32px; border: 1px solid #334155; border-radius: 12px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.3); margin-bottom: 16px;">💾
+                Збережені ігри</button>
             <button id="leaderboard-btn"
                 style="width: 100%; background: rgba(15, 23, 42, 0.8); color: #facc15; font-size: 18px; font-weight: bold; padding: 14px 32px; border: 1px solid #334155; border-radius: 12px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">🏆
                 Рейтинг</button>
+        </div>
+    </div>
+
+    <!-- Saves Screen -->
+    <div id="saves-screen"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); display: none; flex-direction: column; z-index: 999; overflow-y: auto;">
+        <div style="padding: 20px; max-width: 600px; margin: 0 auto; width: 100%;">
+            <div style="display: flex; align-items: center; margin-bottom: 30px;">
+                <button id="back-from-saves-btn"
+                    style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-size: 18px; margin-right: 15px;">←</button>
+                <h2 style="font-size: 28px; font-weight: bold; color: white; margin: 0;">Збережені ігри</h2>
+            </div>
+
+            <div id="saves-list" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Save slots will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Slot Selection Modal -->
+    <div id="save-slot-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1001; align-items: center; justify-content: center;">
+        <div
+            style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 30px; border-radius: 16px; max-width: 500px; width: 90%;">
+            <h3 style="font-size: 24px; font-weight: bold; color: white; margin: 0 0 20px 0; text-align: center;">
+                Оберіть слот для збереження</h3>
+            <div id="save-slot-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                <!-- Slots will be injected here -->
+            </div>
+            <button id="cancel-save-btn"
+                style="width: 100%; background: #dc2626; color: white; font-weight: bold; padding: 12px; border: none; border-radius: 8px; cursor: pointer;">Скасувати</button>
         </div>
     </div>
 
@@ -313,7 +347,12 @@
                         onclick="game.switchTab('parts')">Запчастини</button><span>|</span><button
                         class="hover:text-white underline" onclick="game.switchTab('crew')">Екіпаж</button></div>
             </div>
-            <button id="close-garage" class="text-slate-400 hover:text-white text-2xl px-2">&times;</button>
+            <div class="flex gap-2 items-center">
+                <button id="save-game-btn"
+                    class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded font-bold">💾
+                    Зберегти</button>
+                <button id="close-garage" class="text-slate-400 hover:text-white text-2xl px-2">&times;</button>
+            </div>
         </div>
         <div id="tab-parts" class="flex flex-col flex-grow min-h-0">
             <div class="bg-slate-800/50 p-2 rounded-xl mb-2 border border-slate-700/50">

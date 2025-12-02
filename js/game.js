@@ -155,6 +155,26 @@ class Game {
             document.getElementById('main-menu').style.display = 'flex';
         };
 
+        // Saves screen
+        document.getElementById('saves-btn').onclick = () => {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('saves-screen').style.display = 'flex';
+            this.renderSaveSlots();
+        };
+
+        document.getElementById('back-from-saves-btn').onclick = () => {
+            document.getElementById('saves-screen').style.display = 'none';
+            document.getElementById('main-menu').style.display = 'flex';
+        };
+
+        document.getElementById('save-game-btn').onclick = () => {
+            this.showSaveModal();
+        };
+
+        document.getElementById('cancel-save-btn').onclick = () => {
+            document.getElementById('save-slot-modal').style.display = 'none';
+        };
+
         document.getElementById('vibration-toggle').onchange = (e) => {
             this.settings.vibration = e.target.checked;
             localStorage.setItem('yacht_vibration', this.settings.vibration);
@@ -759,6 +779,214 @@ class Game {
             `;
             list.appendChild(item);
         });
+    }
+
+    // Save/Load System
+    saveToSlot(slotNumber) {
+        const saveData = {
+            timestamp: Date.now(),
+            playerData: {
+                x: this.player.x,
+                y: this.player.y,
+                money: this.player.money,
+                bodyTemp: this.player.bodyTemp,
+                inventory: this.inventory,
+                equip: this.equip,
+                crew: this.player.crew
+            },
+            gameState: {
+                currentBiome: this.currentBiome,
+                day: this.day,
+                mission: this.mission
+            },
+            summary: {
+                distance: Math.abs(this.player.y),
+                money: this.player.money,
+                day: this.day
+            }
+        };
+
+        localStorage.setItem(`yacht_save_slot_${slotNumber}`, JSON.stringify(saveData));
+        alert(`Гру збережено в слот ${slotNumber}!`);
+        document.getElementById('save-slot-modal').style.display = 'none';
+    }
+
+    loadFromSlot(slotNumber) {
+        const saveJson = localStorage.getItem(`yacht_save_slot_${slotNumber}`);
+        if (!saveJson) {
+            alert('Слот порожній!');
+            return;
+        }
+
+        const saveData = JSON.parse(saveJson);
+
+        // Restore player data
+        this.player.x = saveData.playerData.x;
+        this.player.y = saveData.playerData.y;
+        this.player.money = saveData.playerData.money;
+        this.player.bodyTemp = saveData.playerData.bodyTemp;
+        this.inventory = saveData.playerData.inventory;
+        this.equip = saveData.playerData.equip;
+        this.player.crew = saveData.playerData.crew;
+
+        // Restore game state
+        this.currentBiome = saveData.gameState.currentBiome;
+        this.day = saveData.gameState.day;
+        this.mission = saveData.gameState.mission;
+
+        // Reset entities (will spawn new ones based on position)
+        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [] };
+
+        // Recalculate stats
+        this.recalcStats();
+
+        // Set camera position to player
+        this.camY = this.player.y + window.innerHeight / 2;
+
+        // Initialize canvas size
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+
+        // Update UI
+        this.ui.updateUI(this);
+
+        // Hide saves screen and show game
+        document.getElementById('saves-screen').style.display = 'none';
+        document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('game-canvas').style.display = 'block';
+
+        // Show HUD
+        document.getElementById('hud-money').style.display = 'flex';
+        document.getElementById('hud-stats').style.display = 'block';
+        document.getElementById('hud-biome').style.display = 'block';
+        document.getElementById('garage-btn').style.display = 'flex';
+        document.getElementById('audio-btn').style.display = 'block';
+        document.getElementById('skills-container').style.display = 'flex';
+        if (this.mission) document.getElementById('mission-panel').style.display = 'block';
+
+        // Start game
+        this.paused = false;
+        this.gameRunning = true;
+        document.getElementById('garage-modal').classList.add('hidden');
+
+        // Initialize audio if needed
+        if (!Sound.ctx) Sound.init();
+
+        // Start game loop
+        this.loop();
+
+        alert(`Гру завантажено з слоту ${slotNumber}!`);
+    }
+
+    getSaveSlots() {
+        const slots = [];
+        for (let i = 1; i <= 5; i++) {
+            const saveJson = localStorage.getItem(`yacht_save_slot_${i}`);
+            if (saveJson) {
+                const data = JSON.parse(saveJson);
+                slots.push({
+                    slotNumber: i,
+                    timestamp: data.timestamp,
+                    summary: data.summary
+                });
+            } else {
+                slots.push({
+                    slotNumber: i,
+                    timestamp: null,
+                    summary: null
+                });
+            }
+        }
+        return slots;
+    }
+
+    deleteSave(slotNumber) {
+        if (confirm(`Видалити збереження зі слоту ${slotNumber}?`)) {
+            localStorage.removeItem(`yacht_save_slot_${slotNumber}`);
+            this.renderSaveSlots();
+        }
+    }
+
+    renderSaveSlots() {
+        const list = document.getElementById('saves-list');
+        list.innerHTML = '';
+
+        const slots = this.getSaveSlots();
+
+        slots.forEach(slot => {
+            const item = document.createElement('div');
+            item.style.cssText = 'background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 12px; padding: 20px;';
+
+            if (slot.summary) {
+                const date = new Date(slot.timestamp).toLocaleString('uk-UA');
+                item.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="color: #60a5fa; font-weight: bold; font-size: 18px; margin-bottom: 8px;">Слот ${slot.slotNumber}</div>
+                            <div style="color: #94a3b8; font-size: 12px; margin-bottom: 4px;">📅 ${date}</div>
+                            <div style="color: white; font-size: 14px;">
+                                📏 ${Math.floor(slot.summary.distance)}m | 💰 $${slot.summary.money} | 🌅 День ${slot.summary.day}
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button class="load-btn" data-slot="${slot.slotNumber}"
+                                style="background: #10b981; color: white; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;">Завантажити</button>
+                            <button class="delete-btn" data-slot="${slot.slotNumber}"
+                                style="background: #dc2626; color: white; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;">Видалити</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                item.innerHTML = `
+                    <div style="text-align: center; color: #64748b; padding: 20px;">
+                        <div style="font-size: 18px; margin-bottom: 8px;">Слот ${slot.slotNumber}</div>
+                        <div style="font-size: 14px;">Порожній слот</div>
+                    </div>
+                `;
+            }
+
+            list.appendChild(item);
+        });
+
+        // Attach event listeners
+        document.querySelectorAll('.load-btn').forEach(btn => {
+            btn.onclick = () => this.loadFromSlot(parseInt(btn.dataset.slot));
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.onclick = () => this.deleteSave(parseInt(btn.dataset.slot));
+        });
+    }
+
+    showSaveModal() {
+        const modal = document.getElementById('save-slot-modal');
+        const slotList = document.getElementById('save-slot-list');
+        slotList.innerHTML = '';
+
+        const slots = this.getSaveSlots();
+
+        slots.forEach(slot => {
+            const item = document.createElement('button');
+            item.style.cssText = 'background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 8px; padding: 15px; cursor: pointer; text-align: left; color: white; width: 100%;';
+
+            if (slot.summary) {
+                const date = new Date(slot.timestamp).toLocaleString('uk-UA');
+                item.innerHTML = `
+                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 4px; color: #60a5fa;">Слот ${slot.slotNumber} (Зайнято)</div>
+                    <div style="font-size: 12px; color: #94a3b8;">${date}</div>
+                    <div style="font-size: 12px; color: #facc15; margin-top: 4px;">⚠️ Буде перезаписано</div>
+                `;
+            } else {
+                item.innerHTML = `
+                    <div style="font-weight: bold; font-size: 16px; color: #10b981;">Слот ${slot.slotNumber} (Порожній)</div>
+                `;
+            }
+
+            item.onclick = () => this.saveToSlot(slot.slotNumber);
+            slotList.appendChild(item);
+        });
+
+        modal.style.display = 'flex';
     }
 }
 
