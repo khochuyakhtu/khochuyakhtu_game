@@ -732,12 +732,30 @@ class Game {
         const saved = localStorage.getItem(this.getSaveKey());
         if (saved) {
             const data = JSON.parse(saved);
-            this.player.money = data.money;
+            this.player.money = data.money || 0;
             this.inventory = data.inventory || Array(10).fill(null);
-            this.equip = data.equip || { hull: null, engine: null, cabin: null, magnet: null, radar: null };
+
+            // Robust Equip Load
+            const defaultEquip = { hull: null, engine: null, cabin: null, magnet: null, radar: null };
+            this.equip = { ...defaultEquip, ...(data.equip || {}) };
+
             this.player.y = data.y || 0;
             this.gameTime = data.time || 0;
-            this.player.crew = data.crew || { mechanic: false, navigator: false };
+
+            // Robust Crew Load
+            const defaultCrew = {
+                mechanic: { hired: false, level: 0 },
+                navigator: { hired: false, level: 0 },
+                doctor: { hired: false, level: 0 },
+                merchant: { hired: false, level: 0 },
+                gunner: { hired: false, level: 0 }
+            };
+            const savedCrew = data.crew || {};
+            this.player.crew = {};
+            for (const role in defaultCrew) {
+                this.player.crew[role] = { ...defaultCrew[role], ...(savedCrew[role] || {}) };
+            }
+
             this.recalcStats();
         }
         this.startMission();
