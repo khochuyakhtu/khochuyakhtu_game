@@ -748,11 +748,23 @@ class Game {
     startMission() {
         let dist = 5000 + Math.random() * 5000;
         let angle = -Math.PI / 2 + (Math.random() - 0.5); // Upwards (player swims up, so mission should be above)
+
+        let tx = this.player.x + Math.cos(angle) * dist;
+        let ty = this.player.y + Math.sin(angle) * dist;
+
+        // Clamp X to screen bounds with padding
+        tx = Math.max(50, Math.min(window.innerWidth - 50, tx));
+
         this.mission = {
-            tx: this.player.x + Math.cos(angle) * dist,
-            ty: this.player.y + Math.sin(angle) * dist,
+            tx: tx,
+            ty: ty,
             reward: 1000 + Math.floor(Math.abs(this.player.y) / 10)
         };
+
+        // Show panel
+        document.getElementById('mission-panel').style.display = 'block';
+        document.getElementById('mission-desc').innerText = "Доставте вантаж";
+        document.getElementById('mission-reward').innerText = `$${this.mission.reward}`;
     }
 
     completeMission() {
