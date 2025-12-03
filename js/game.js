@@ -16,8 +16,14 @@ class Game {
         if (this.tg) {
             this.tg.ready();
             this.tg.expand();
-            this.tg.disableVerticalSwipes();
-            this.tg.enableClosingConfirmation();
+            // disableVerticalSwipes requires version 7.7+
+            if (this.tg.version && parseFloat(this.tg.version) >= 7.7) {
+                this.tg.disableVerticalSwipes();
+            }
+            // enableClosingConfirmation requires version 6.2+
+            if (this.tg.version && parseFloat(this.tg.version) >= 6.2) {
+                this.tg.enableClosingConfirmation();
+            }
         }
 
         // --- Modules ---
@@ -640,7 +646,7 @@ class Game {
 
         this.player.isDead = true;
         this.saveScore(this.player.money); // Save score on death
-        document.getElementById('game-over-modal').classList.remove('hidden');
+        document.getElementById('game-over-modal').style.display = 'flex';
         document.getElementById('go-reason').innerText = reason;
         document.getElementById('final-score').innerText = `$${this.player.money}`;
         document.getElementById('go-emoji').innerText = reason.includes("Замерз") ? "🥶" : "💀";
@@ -666,7 +672,7 @@ class Game {
         this.recalcStats();
 
         this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [] };
-        document.getElementById('game-over-modal').classList.add('hidden');
+        document.getElementById('game-over-modal').style.display = 'none';
         this.startMission();
         this.saveGame();
         this.ui.updateUI(this);

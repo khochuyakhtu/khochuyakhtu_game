@@ -172,7 +172,23 @@
             </div>
         </div>
     </div>
-
+    <!-- Game Over Screen -->
+    <div id="game-over-modal" class="ui-layer modal interactive hidden flex items-center justify-center z-50">
+        <div
+            class="bg-slate-900 border border-red-900/50 p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full relative">
+            <div class="text-6xl mb-2" id="go-emoji">💀</div>
+            <h2 class="text-2xl font-bold text-white mb-2" id="go-title">Game Over</h2>
+            <p class="text-sm text-slate-400 mb-6" id="go-reason">...</p>
+            <div class="bg-black/40 p-3 rounded mb-6">
+                <div class="text-[10px] text-slate-500 uppercase">Збережений Бюджет</div>
+                <div class="text-2xl font-mono text-green-400" id="final-score">0</div>
+            </div>
+            <button onclick="game.respawn()"
+                class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-lg shadow-lg">Відродитися</button>
+            <button onclick="game.hardReset()" class="mt-2 text-xs text-slate-500 hover:text-red-400">Скинути
+                прогрес</button>
+        </div>
+    </div>
     <!-- Settings Screen -->
     <div id="settings-screen"
         style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); display: none; flex-direction: column; z-index: 999; overflow-y: auto;">
@@ -293,16 +309,17 @@
         <div style="font-size: 9px; color: #64748b; margin-top: 4px;">День: <span id="day-count">1</span></div>
     </div>
 
+    <!-- Weather Indicator -->
+    <div id="weather-indicator"
+        style="position: absolute; top: 52px; right: 12px; display: none; font-size: 20px; z-index: 100; animation: pulse 2s infinite;">
+        🌫️
+    </div>
+
     <!-- Workshop Button (Top Right) -->
     <button id="garage-btn"
         style="position: absolute; top: 72px; right: 12px; background: #4f46e5; color: white; font-weight: bold; padding: 8px 16px; border-radius: 8px; border: none; border-bottom: 4px solid #3730a3; cursor: pointer; gap: 8px; z-index: 100; display: none;">
         <span>🛠️</span> <span style="font-size: 14px;">Майстерня</span>
     </button>
-
-    <!-- Audio Button -->
-    <button id="audio-btn"
-        style="position: absolute; top: 124px; right: 12px; background: #334155; color: white; padding: 8px; border-radius: 8px; font-size: 12px; opacity: 0.5; border: none; cursor: pointer; z-index: 100; display: none;">🔇
-        Звук</button>
 
     <!--Warning Label -->
     <div id="warning-label"
@@ -342,7 +359,8 @@
     <div id="garage-modal" class="ui-layer modal interactive hidden flex flex-col p-4 overflow-hidden">
         <div class="flex justify-between items-center mb-2 border-b border-slate-700 pb-2">
             <div>
-                <h2 class="text-xl font-bold text-white">Док (Пауза)</h2>
+                <h2 class="text-xl font-bold text-white">Док (Пауза) <span class="text-sm text-green-400 ml-2">$<span
+                            id="garage-money">0</span></span></h2>
                 <div class="flex gap-2 text-[10px] text-slate-400"><button class="hover:text-white underline"
                         onclick="game.switchTab('parts')">Запчастини</button><span>|</span><button
                         class="hover:text-white underline" onclick="game.switchTab('crew')">Екіпаж</button></div>
@@ -475,27 +493,16 @@
             <div class="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700">
                 <div class="text-3xl">🔫</div>
                 <div class="flex-grow">
-                    <!-- Game Over Screen -->
-                    <div id="game-over-modal"
-                        class="ui-layer modal interactive hidden flex items-center justify-center z-50">
-                        <div
-                            class="bg-slate-900 border border-red-900/50 p-8 rounded-2xl shadow-2xl text-center max-w-sm w-full relative">
-                            <div class="text-6xl mb-2" id="go-emoji">💀</div>
-                            <h2 class="text-2xl font-bold text-white mb-2" id="go-title">Game Over</h2>
-                            <p class="text-sm text-slate-400 mb-6" id="go-reason">...</p>
-                            <div class="bg-black/40 p-3 rounded mb-6">
-                                <div class="text-[10px] text-slate-500 uppercase">Збережений Бюджет</div>
-                                <div class="text-2xl font-mono text-green-400" id="final-score">0</div>
-                            </div>
-                            <button onclick="game.respawn()"
-                                class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-lg shadow-lg">Відродитися</button>
-                            <button onclick="game.hardReset()"
-                                class="mt-2 text-xs text-slate-500 hover:text-red-400">Скинути
-                                прогрес</button>
-                        </div>
-                    </div>
+                    <div class="font-bold text-white"></div>
+                    <div class="text-[10px] text-slate-400"></div>
+                    <div id="level-merchant" class="text-[9px] text-green-400"></div>
+                </div>
+                <button id="hire-gunner"
+                    class="bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-2 rounded font-bold"
+                    onclick="game.hireCrew('merchant')">$500</button>
+            </div>
 
-                    <script type="module" src="js/game.js"></script>
+            <script type="module" src="js/game.js"></script>
 </body>
 
 </html>

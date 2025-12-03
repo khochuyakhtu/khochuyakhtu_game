@@ -249,25 +249,46 @@ export class Renderer {
         // Night Overlay
         this.drawNightOverlay(dayPhase, camY, gameTime);
 
+        // Fog Overlay
+        if (game.weather && game.weather.isFogVisible()) {
+            this.drawFogOverlay(game.weather, player, equip);
+        }
+
         // Radar UI Indicators
         if (player.isYacht && equip.radar) {
             this.ctx.save();
             let radarMax = 300 + (player.radarRange * 500);
             if (player.crew.navigator.hired) radarMax *= 1.5;
 
+            // Check if fog is active for enhanced visibility
+            const fogActive = game.weather && game.weather.isFogVisible();
+            const radarBoost = fogActive ? 1.5 : 1; // Bigger dots during fog
+
             // Mines dots
             entities.mines.forEach(m => {
                 let d = Math.hypot(m.x - player.x, m.y - player.y);
                 if (d > 300 && d < radarMax) {
                     let a = Math.atan2(m.y - player.y, m.x - player.x);
-                    this.ctx.fillStyle = 'red'; this.ctx.beginPath(); this.ctx.arc(window.innerWidth / 2 + Math.cos(a) * 100, window.innerHeight / 2 + Math.sin(a) * 100, 4, 0, Math.PI * 2); this.ctx.fill();
+                    this.ctx.fillStyle = fogActive ? 'rgba(255, 50, 50, 0.9)' : 'red';
+                    this.ctx.shadowBlur = fogActive ? 10 : 0;
+                    this.ctx.shadowColor = 'red';
+                    this.ctx.beginPath();
+                    this.ctx.arc(window.innerWidth / 2 + Math.cos(a) * 100, window.innerHeight / 2 + Math.sin(a) * 100, 4 * radarBoost, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0;
                 }
             });
             entities.sharks.forEach(s => {
                 let d = Math.hypot(s.x - player.x, s.y - player.y);
                 if (d > 300 && d < radarMax) {
                     let a = Math.atan2(s.y - player.y, s.x - player.x);
-                    this.ctx.fillStyle = 'orange'; this.ctx.beginPath(); this.ctx.arc(window.innerWidth / 2 + Math.cos(a) * 100, window.innerHeight / 2 + Math.sin(a) * 100, 6, 0, Math.PI * 2); this.ctx.fill();
+                    this.ctx.fillStyle = fogActive ? 'rgba(255, 165, 0, 0.9)' : 'orange';
+                    this.ctx.shadowBlur = fogActive ? 10 : 0;
+                    this.ctx.shadowColor = 'orange';
+                    this.ctx.beginPath();
+                    this.ctx.arc(window.innerWidth / 2 + Math.cos(a) * 100, window.innerHeight / 2 + Math.sin(a) * 100, 6 * radarBoost, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0;
                 }
             });
             this.ctx.restore();
@@ -385,6 +406,55 @@ export class Renderer {
 
             this.ctx.restore();
         }
+    }
+
+    drawFogOverlay(weather, player, equip) {
+        if (!weather.isFogVisible()) return;
+
+        const fogIntensity = weather.fogIntensity;
+
+        // Calculate visibility radius based on equipment and crew
+        const visibilityRadius = weather.getVisibilityRadius(player, equip);
+
+        // Create radial gradient from center of screen
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to screen coordinates
+
+        // Create gradient: clear in center, dark fog outside
+        const gradient = this.ctx.createRadialGradient(
+            centerX, centerY, visibilityRadius * 0.7, // Inner radius (clear zone)
+            centerX, centerY, visibilityRadius + 100  // Outer radius (full fog)
+        );
+
+        gradient.addColorStop(0, `rgba(26, 26, 26, 0)`); // Clear center
+        gradient.addColorStop(0.5, `rgba(26, 26, 26, ${0.3 * fogIntensity})`); // Transition
+        gradient.addColorStop(1, `rgba(26, 26, 26, ${0.85 * fogIntensity})`); // Dense fog
+
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Add subtle fog particles for atmosphere
+        if (fogIntensity > 0.5) {
+            this.ctx.globalAlpha = fogIntensity * 0.3;
+            for (let i = 0; i < 30; i++) {
+                const seed = i * 73.5;
+                const x = ((seed * 231.456) % this.canvas.width);
+                const y = ((seed * 517.012) % this.canvas.height);
+                const size = 30 + (i % 20);
+
+                const particleGradient = this.ctx.createRadialGradient(x, y, 0, x, y, size);
+                particleGradient.addColorStop(0, 'rgba(200, 200, 200, 0.1)');
+                particleGradient.addColorStop(1, 'rgba(200, 200, 200, 0)');
+
+                this.ctx.fillStyle = particleGradient;
+                this.ctx.fillRect(x - size, y - size, size * 2, size * 2);
+            }
+        }
+
+        this.ctx.restore();
     }
 
     drawDebug(game) {

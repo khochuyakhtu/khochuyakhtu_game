@@ -29,7 +29,19 @@ export const CONFIG = {
 };
 
 export const Haptics = {
-    impact: (style) => window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(style),
-    notify: (type) => window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred(type),
-    selection: () => window.Telegram?.WebApp?.HapticFeedback?.selectionChanged()
+    impact: (style) => {
+        if (window.Telegram?.WebApp?.version && parseFloat(window.Telegram.WebApp.version) >= 6.1) {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred(style);
+        }
+    },
+    notify: (type) => {
+        if (window.Telegram?.WebApp?.version && parseFloat(window.Telegram.WebApp.version) >= 6.1) {
+            window.Telegram.WebApp.HapticFeedback.notificationOccurred(type);
+        }
+    },
+    selection: () => {
+        if (window.Telegram?.WebApp?.version && parseFloat(window.Telegram.WebApp.version) >= 6.1) {
+            window.Telegram.WebApp.HapticFeedback.selectionChanged();
+        }
+    }
 };
