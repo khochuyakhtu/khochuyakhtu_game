@@ -67,7 +67,7 @@ class Game {
         this.equip = { hull: null, engine: null, cabin: null, magnet: null, radar: null };
         this.selectedSlot = null;
 
-        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [] };
+        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [], pirates: [], pirateBullets: [] };
         this.currentBiome = CONFIG.biomes[0];
 
         // Listeners
@@ -446,23 +446,36 @@ class Game {
         let target = null;
         let minDist = range;
 
-        // Find closest mine
-        this.entities.mines.forEach((m, idx) => {
-            const d = Math.hypot(m.x - this.player.x, m.y - this.player.y);
+        // PRIORITY 1: Find closest pirate
+        this.entities.pirates.forEach((p, idx) => {
+            const d = Math.hypot(p.x - this.player.x, p.y - this.player.y);
             if (d < minDist) {
                 minDist = d;
-                target = { entity: m, type: 'mine', index: idx };
+                target = { entity: p, type: 'pirate', index: idx };
             }
         });
 
-        // Find closest shark
-        this.entities.sharks.forEach((s, idx) => {
-            const d = Math.hypot(s.x - this.player.x, s.y - this.player.y);
-            if (d < minDist) {
-                minDist = d;
-                target = { entity: s, type: 'shark', index: idx };
-            }
-        });
+        // PRIORITY 2: Find closest mine (only if no pirate found)
+        if (!target) {
+            this.entities.mines.forEach((m, idx) => {
+                const d = Math.hypot(m.x - this.player.x, m.y - this.player.y);
+                if (d < minDist) {
+                    minDist = d;
+                    target = { entity: m, type: 'mine', index: idx };
+                }
+            });
+        }
+
+        // PRIORITY 3: Find closest shark (only if no pirate/mine found)
+        if (!target) {
+            this.entities.sharks.forEach((s, idx) => {
+                const d = Math.hypot(s.x - this.player.x, s.y - this.player.y);
+                if (d < minDist) {
+                    minDist = d;
+                    target = { entity: s, type: 'shark', index: idx };
+                }
+            });
+        }
 
         if (target) {
             Sound.play('skill');
@@ -478,7 +491,17 @@ class Game {
                 color: 'rgba(255, 200, 0, 1)'
             });
 
-            if (target.type === 'mine') {
+            if (target.type === 'pirate') {
+                // Damage pirate
+                target.entity.health -= 10;
+                if (target.entity.health <= 0) {
+                    this.entities.pirates.splice(target.index, 1);
+                    this.entityManager.addExplosion(target.entity.x, target.entity.y, this.entities);
+                    // Award money for destroying pirate
+                    this.player.money += 50;
+                    this.ui.showFloatText('+$50', target.entity.x, target.entity.y, '#4ade80', this.camY);
+                }
+            } else if (target.type === 'mine') {
                 if (target.entity.lvl > 1) {
                     target.entity.lvl -= 1;
                 } else {
@@ -602,6 +625,19 @@ class Game {
                     t.active = false;
                 }
             });
+
+            // Pirate Bullets
+            for (let i = this.entities.pirateBullets.length - 1; i >= 0; i--) {
+                const bullet = this.entities.pirateBullets[i];
+                if (!isVisible(bullet)) continue;
+
+                const d = Math.hypot(bullet.x - this.player.x, bullet.y - this.player.y);
+                if (d < 20) { // Hit yacht
+                    this.handleHit(bullet.damage, 'pirate');
+                    this.entities.pirateBullets.splice(i, 1);
+                    break;
+                }
+            }
         }
     }
 
@@ -676,7 +712,7 @@ class Game {
         this.player.gunner = { lastShot: 0 };
         this.recalcStats();
 
-        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [] };
+        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [], pirates: [], pirateBullets: [] };
         document.getElementById('game-over-modal').style.display = 'none';
         this.startMission();
         this.saveGame();
@@ -1020,7 +1056,7 @@ class Game {
         if (saveData.gameState.weather) this.weather.fromJSON(saveData.gameState.weather);
 
         // Reset entities (will spawn new ones based on position)
-        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [] };
+        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [], pirates: [], pirateBullets: [] };
 
         // Recalculate stats
         this.recalcStats();

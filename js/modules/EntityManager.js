@@ -50,12 +50,27 @@ export class EntityManager {
             this.spawnKraken(game);
         }
 
+        // Pirates (Active enemies)
+        if (currentBiome.danger >= 3 && entities.pirates.length < Math.floor(currentBiome.danger / 2) && Math.random() < 0.008) {
+            entities.pirates.push({
+                x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
+                y: spawnY - 600,
+                vx: 0, vy: 0,
+                angle: 0,
+                health: 30,
+                lastShot: 0,
+                fleeing: false
+            });
+        }
+
         this.cleanup(entities.coins, player);
         this.cleanup(entities.coffee, player);
         this.cleanup(entities.repairKits, player);
         this.cleanup(entities.mines, player);
         this.cleanup(entities.icebergs, player);
         this.cleanup(entities.whirlpools, player);
+        this.cleanup(entities.pirates, player);
+        this.cleanup(entities.pirateBullets, player);
 
         // Debug: Log entity counts
         if (gameTime % 60 === 0) {
@@ -121,6 +136,71 @@ export class EntityManager {
         });
         if (entities.tentacles.length > 0 && entities.tentacles[0].y > player.y + 500) {
             entities.tentacles = []; // Despawn behind
+        }
+
+        // Pirates AI
+        entities.pirates.forEach((pirate, idx) => {
+            const dx = player.x - pirate.x;
+            const dy = player.y - pirate.y;
+            const dist = Math.hypot(dx, dy);
+            const targetAngle = Math.atan2(dy, dx);
+
+            // Flee if low health
+            if (pirate.health < 10) {
+                pirate.fleeing = true;
+            }
+
+            if (pirate.fleeing) {
+                // Move away from player
+                pirate.angle = targetAngle + Math.PI;
+                pirate.vx = Math.cos(pirate.angle) * 2;
+                pirate.vy = Math.sin(pirate.angle) * 2;
+            } else if (dist < 500) {
+                // In detection range
+                if (dist > 250) {
+                    // Chase player but maintain distance
+                    const approachAngle = targetAngle + (Math.random() - 0.5) * 0.3;
+                    pirate.vx += Math.cos(approachAngle) * 0.15;
+                    pirate.vy += Math.sin(approachAngle) * 0.15;
+                } else {
+                    // In attack range - slow down and shoot
+                    pirate.vx *= 0.90;
+                    pirate.vy *= 0.90;
+
+                    // Shoot at player
+                    if (game.gameTime - pirate.lastShot > 120) { // Every 2 seconds
+                        pirate.lastShot = game.gameTime;
+                        const bulletSpeed = 3;
+                        entities.pirateBullets.push({
+                            x: pirate.x,
+                            y: pirate.y,
+                            vx: Math.cos(targetAngle) * bulletSpeed,
+                            vy: Math.sin(targetAngle) * bulletSpeed,
+                            angle: targetAngle,
+                            damage: 3,
+                            life: 180
+                        });
+                    }
+                }
+                pirate.angle = targetAngle;
+            }
+
+            // Apply velocity with friction
+            pirate.x += pirate.vx;
+            pirate.y += pirate.vy;
+            pirate.vx *= 0.95;
+            pirate.vy *= 0.95;
+        });
+
+        // Pirate Bullets
+        for (let i = entities.pirateBullets.length - 1; i >= 0; i--) {
+            const bullet = entities.pirateBullets[i];
+            bullet.x += bullet.vx;
+            bullet.y += bullet.vy;
+            bullet.life--;
+            if (bullet.life <= 0) {
+                entities.pirateBullets.splice(i, 1);
+            }
         }
     }
 

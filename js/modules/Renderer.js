@@ -113,6 +113,49 @@ export class Renderer {
             this.ctx.restore();
         });
 
+        // Pirates
+        entities.pirates.forEach(p => {
+            if (!isVisible(p)) return;
+            this.ctx.save();
+            this.ctx.translate(p.x, p.y);
+            this.ctx.rotate(p.angle);
+
+            // Pirate boat body
+            this.ctx.fillStyle = p.fleeing ? '#7c2d12' : '#991b1b';
+            this.ctx.beginPath();
+            this.ctx.moveTo(25, 0);
+            this.ctx.lineTo(-15, -12);
+            this.ctx.lineTo(-20, 0);
+            this.ctx.lineTo(-15, 12);
+            this.ctx.fill();
+
+            // Pirate flag emoji
+            this.ctx.restore();
+            this.ctx.font = '16px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText('☠️', p.x, p.y - 20);
+
+            // Health bar
+            this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            this.ctx.fillRect(p.x - 20, p.y - 30, 40, 4);
+            this.ctx.fillStyle = p.health > 15 ? '#10b981' : '#ef4444';
+            this.ctx.fillRect(p.x - 20, p.y - 30, (p.health / 30) * 40, 4);
+        });
+
+        // Pirate Bullets
+        entities.pirateBullets.forEach(b => {
+            if (!isVisible(b)) return;
+            this.ctx.save();
+            this.ctx.shadowBlur = 8;
+            this.ctx.shadowColor = '#fbbf24';
+            this.ctx.fillStyle = '#fbbf24';
+            this.ctx.beginPath();
+            this.ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.restore();
+        });
+
         // Mines
         entities.mines.forEach(m => {
             if (!isVisible(m)) return;
