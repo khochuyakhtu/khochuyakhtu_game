@@ -5,6 +5,7 @@ import { Renderer } from './modules/Renderer.js';
 import { EntityManager } from './modules/EntityManager.js';
 import { UIManager } from './modules/UIManager.js';
 import { Sound } from './modules/AudioManager.js';
+import { WeatherManager } from './modules/WeatherManager.js';
 
 class Game {
     constructor() {
@@ -32,6 +33,7 @@ class Game {
         this.renderer = new Renderer(this.canvas);
         this.entityManager = new EntityManager();
         this.ui = new UIManager();
+        this.weather = new WeatherManager();
 
         // --- Game State ---
         this.gameTime = 0;
@@ -370,7 +372,17 @@ class Game {
         // Entities & Mission
         this.entityManager.spawn(this);
         this.entityManager.update(this);
+        this.weather.update(this.gameTime);
         this.checkCollisions();
+
+        // Weather UI
+        const weatherEl = document.getElementById('weather-indicator');
+        if (this.weather.isFogVisible()) {
+            weatherEl.style.display = 'block';
+            weatherEl.innerText = '🌫️';
+        } else {
+            weatherEl.style.display = 'none';
+        }
 
         // Mission Update
         if (this.mission) {
@@ -723,7 +735,8 @@ class Game {
             equip: this.equip,
             y: this.player.y,
             time: this.gameTime,
-            crew: this.player.crew
+            crew: this.player.crew,
+            weather: this.weather.toJSON()
         };
         localStorage.setItem(this.getSaveKey(), JSON.stringify(data));
     }
@@ -755,6 +768,8 @@ class Game {
             for (const role in defaultCrew) {
                 this.player.crew[role] = { ...defaultCrew[role], ...(savedCrew[role] || {}) };
             }
+
+            if (data.weather) this.weather.fromJSON(data.weather);
 
             this.recalcStats();
         }
@@ -950,6 +965,12 @@ class Game {
                 distance: Math.abs(this.player.y),
                 money: this.player.money,
                 day: this.day
+            },
+            gameState: {
+                currentBiome: this.currentBiome,
+                day: this.day,
+                mission: this.mission,
+                weather: this.weather.toJSON()
             }
         };
 
@@ -996,6 +1017,7 @@ class Game {
         this.currentBiome = saveData.gameState.currentBiome;
         this.day = saveData.gameState.day;
         this.mission = saveData.gameState.mission;
+        if (saveData.gameState.weather) this.weather.fromJSON(saveData.gameState.weather);
 
         // Reset entities (will spawn new ones based on position)
         this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [] };
