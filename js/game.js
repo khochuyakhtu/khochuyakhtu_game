@@ -887,7 +887,7 @@ class Game {
             document.getElementById('yacht-status').innerText = `Зібрано ${equipped.length}/5`; document.getElementById('yacht-status').className = "text-[10px] text-red-400";
         }
 
-        if (this.equip.engine) this.player.speedMult += (this.equip.engine.tier || 0) * 0.5;
+        if (this.equip.engine) this.player.speedMult += (this.equip.engine.tier || 0) * 0.2;
         if (this.equip.hull) this.player.armorLvl = (this.equip.hull.tier || 0);
         if (this.equip.cabin) this.player.heatResist = (this.equip.cabin.tier || 0) + 1;
         if (this.equip.magnet) this.player.pickupRange += (this.equip.magnet.tier || 0) * 0.5;
