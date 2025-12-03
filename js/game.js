@@ -33,16 +33,6 @@ class Game {
         this.entityManager = new EntityManager();
         this.ui = new UIManager();
 
-        // Audio init
-        document.getElementById('audio-btn').onclick = () => {
-            if (!Sound.enabled) {
-                Sound.init();
-            } else {
-                Sound.enabled = !Sound.enabled;
-                document.getElementById('audio-btn').style.opacity = Sound.enabled ? '1' : '0.5';
-            }
-        };
-
         // --- Game State ---
         this.gameTime = 0;
         this.paused = true;
@@ -90,13 +80,15 @@ class Game {
             document.getElementById('hud-stats').style.display = 'block';
             document.getElementById('hud-biome').style.display = 'block';
             document.getElementById('garage-btn').style.display = 'flex';
-            document.getElementById('audio-btn').style.display = 'block';
             document.getElementById('skills-container').style.display = 'flex';
 
             // Start fresh every time
             this.respawn();
             this.paused = false;
-            if (!Sound.ctx) Sound.init();
+            if (!Sound.ctx) {
+                Sound.init();
+                Sound.enabled = this.settings.sound;
+            }
             this.loop();
         };
 
@@ -125,7 +117,6 @@ class Game {
         document.getElementById('nickname-input').value = this.settings.nickname;
         document.getElementById('sound-toggle').checked = this.settings.sound;
         document.getElementById('vibration-toggle').checked = this.settings.vibration;
-        document.getElementById('audio-btn').style.opacity = Sound.enabled ? '1' : '0.5';
 
         // Settings Listeners
         document.getElementById('settings-btn').onclick = () => {
@@ -148,10 +139,12 @@ class Game {
 
         document.getElementById('sound-toggle').onchange = (e) => {
             this.settings.sound = e.target.checked;
-            Sound.enabled = this.settings.sound;
             localStorage.setItem('yacht_sound', this.settings.sound);
-            document.getElementById('audio-btn').style.opacity = Sound.enabled ? '1' : '0.5';
-            if (this.settings.sound && !Sound.ctx) Sound.init();
+            if (this.settings.sound) {
+                Sound.init(); // Always init when enabling sound
+            } else {
+                Sound.enabled = false;
+            }
         };
 
         // Leaderboard

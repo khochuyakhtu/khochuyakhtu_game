@@ -14,8 +14,6 @@ export class AudioManager {
             this.ctx.resume();
         }
         this.enabled = true;
-        document.getElementById('audio-btn').style.opacity = '1';
-        document.getElementById('audio-btn').innerText = '🔊 Звук';
     }
 
     play(type) {
