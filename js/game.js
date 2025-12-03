@@ -67,7 +67,7 @@ class Game {
         this.equip = { hull: null, engine: null, cabin: null, magnet: null, radar: null };
         this.selectedSlot = null;
 
-        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [], pirates: [], pirateBullets: [] };
+        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [], pirates: [], pirateBullets: [], oilSlicks: [] };
         this.currentBiome = CONFIG.biomes[0];
 
         // Listeners
@@ -278,6 +278,14 @@ class Game {
             let speed = (dist / 50) * 4 * this.player.speedMult;
             if (this.player.skills.nitro.active) speed *= 2;
 
+            // Check if player is in oil slick (80% slowdown)
+            this.entities.oilSlicks.forEach(oil => {
+                const d = Math.hypot(oil.x - this.player.x, oil.y - this.player.y);
+                if (d < oil.r) {
+                    speed *= 0.2; // 80% reduction
+                }
+            });
+
             this.player.vel.x += Math.cos(angle) * speed * 0.1;
             this.player.vel.y += Math.sin(angle) * speed * 0.1;
             this.player.angle = angle;
@@ -304,6 +312,15 @@ class Game {
                 let angle = Math.atan2(ky, kx);
                 let speed = 4 * this.player.speedMult;
                 if (this.player.skills.nitro.active) speed *= 2;
+
+                // Check if player is in oil slick (80% slowdown)
+                this.entities.oilSlicks.forEach(oil => {
+                    const d = Math.hypot(oil.x - this.player.x, oil.y - this.player.y);
+                    if (d < oil.r) {
+                        speed *= 0.2; // 80% reduction
+                    }
+                });
+
                 this.player.vel.x += Math.cos(angle) * speed * 0.1;
                 this.player.vel.y += Math.sin(angle) * speed * 0.1;
                 this.player.angle = angle;
@@ -712,7 +729,7 @@ class Game {
         this.player.gunner = { lastShot: 0 };
         this.recalcStats();
 
-        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [], pirates: [], pirateBullets: [] };
+        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [], pirates: [], pirateBullets: [], oilSlicks: [] };
         document.getElementById('game-over-modal').style.display = 'none';
         this.startMission();
         this.saveGame();
@@ -1056,7 +1073,7 @@ class Game {
         if (saveData.gameState.weather) this.weather.fromJSON(saveData.gameState.weather);
 
         // Reset entities (will spawn new ones based on position)
-        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [], pirates: [], pirateBullets: [] };
+        this.entities = { mines: [], coins: [], particles: [], sharks: [], whirlpools: [], icebergs: [], tentacles: [], coffee: [], repairKits: [], pirates: [], pirateBullets: [], oilSlicks: [] };
 
         // Recalculate stats
         this.recalcStats();

@@ -71,6 +71,17 @@ export class EntityManager {
         this.cleanup(entities.whirlpools, player);
         this.cleanup(entities.pirates, player);
         this.cleanup(entities.pirateBullets, player);
+        this.cleanup(entities.oilSlicks, player);
+
+        // Oil Slicks (Environmental hazard)
+        if (currentBiome.danger >= 2 && entities.oilSlicks.length < 3 && Math.random() < 0.01) {
+            const radius = 80 + Math.random() * 40; // 80-120px radius
+            entities.oilSlicks.push({
+                x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
+                y: spawnY + Math.random() * 600,
+                r: radius
+            });
+        }
 
         // Debug: Log entity counts
         if (gameTime % 60 === 0) {

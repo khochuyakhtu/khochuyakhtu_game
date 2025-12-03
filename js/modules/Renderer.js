@@ -46,6 +46,27 @@ export class Renderer {
             this.ctx.restore();
         });
 
+        // Oil Slicks
+        entities.oilSlicks.forEach(oil => {
+            if (!isVisible(oil)) return;
+            // Draw dark oil patch
+            const gradient = this.ctx.createRadialGradient(oil.x, oil.y, 0, oil.x, oil.y, oil.r);
+            gradient.addColorStop(0, 'rgba(20, 20, 20, 0.8)');
+            gradient.addColorStop(0.7, 'rgba(30, 30, 30, 0.6)');
+            gradient.addColorStop(1, 'rgba(40, 40, 40, 0.2)');
+            this.ctx.fillStyle = gradient;
+            this.ctx.beginPath();
+            this.ctx.arc(oil.x, oil.y, oil.r, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Add shimmer effect
+            this.ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(oil.x, oil.y, oil.r * 0.6, 0, Math.PI * 2);
+            this.ctx.stroke();
+        });
+
         // Icebergs
         entities.icebergs.forEach(ice => {
             if (!isVisible(ice)) return;
