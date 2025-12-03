@@ -872,11 +872,11 @@ class Game {
             document.getElementById('yacht-status').innerText = `Зібрано ${equipped.length}/5`; document.getElementById('yacht-status').className = "text-[10px] text-red-400";
         }
 
-        if (this.equip.engine) this.player.speedMult += this.equip.engine.tier * 0.5;
-        if (this.equip.hull) this.player.armorLvl = this.equip.hull.tier;
-        if (this.equip.cabin) this.player.heatResist = this.equip.cabin.tier + 1;
-        if (this.equip.magnet) this.player.pickupRange += this.equip.magnet.tier * 0.5;
-        if (this.equip.radar) this.player.radarRange = 1 + (this.equip.radar.tier * 0.5);
+        if (this.equip.engine) this.player.speedMult += (this.equip.engine.tier || 0) * 0.5;
+        if (this.equip.hull) this.player.armorLvl = (this.equip.hull.tier || 0);
+        if (this.equip.cabin) this.player.heatResist = (this.equip.cabin.tier || 0) + 1;
+        if (this.equip.magnet) this.player.pickupRange += (this.equip.magnet.tier || 0) * 0.5;
+        if (this.equip.radar) this.player.radarRange = 1 + ((this.equip.radar.tier || 0) * 0.5);
 
         this.ui.updateUI(this);
     }
@@ -968,13 +968,29 @@ class Game {
         const saveData = JSON.parse(saveJson);
 
         // Restore player data
-        this.player.x = saveData.playerData.x;
-        this.player.y = saveData.playerData.y;
-        this.player.money = saveData.playerData.money;
-        this.player.bodyTemp = saveData.playerData.bodyTemp;
-        this.inventory = saveData.playerData.inventory;
-        this.equip = saveData.playerData.equip;
-        this.player.crew = saveData.playerData.crew;
+        this.player.x = saveData.playerData.x || window.innerWidth / 2;
+        this.player.y = saveData.playerData.y || 0;
+        this.player.money = saveData.playerData.money || 0;
+        this.player.bodyTemp = saveData.playerData.bodyTemp || 36.6;
+        this.inventory = saveData.playerData.inventory || Array(10).fill(null);
+
+        // Robust Equip Load
+        const defaultEquip = { hull: null, engine: null, cabin: null, magnet: null, radar: null };
+        this.equip = { ...defaultEquip, ...(saveData.playerData.equip || {}) };
+
+        // Robust Crew Load
+        const defaultCrew = {
+            mechanic: { hired: false, level: 0 },
+            navigator: { hired: false, level: 0 },
+            doctor: { hired: false, level: 0 },
+            merchant: { hired: false, level: 0 },
+            gunner: { hired: false, level: 0 }
+        };
+        const savedCrew = saveData.playerData.crew || {};
+        this.player.crew = {};
+        for (const role in defaultCrew) {
+            this.player.crew[role] = { ...defaultCrew[role], ...(savedCrew[role] || {}) };
+        }
 
         // Restore game state
         this.currentBiome = saveData.gameState.currentBiome;
@@ -1007,7 +1023,6 @@ class Game {
         document.getElementById('hud-stats').style.display = 'block';
         document.getElementById('hud-biome').style.display = 'block';
         document.getElementById('garage-btn').style.display = 'flex';
-        document.getElementById('audio-btn').style.display = 'block';
         document.getElementById('skills-container').style.display = 'flex';
         if (this.mission) document.getElementById('mission-panel').style.display = 'block';
 
