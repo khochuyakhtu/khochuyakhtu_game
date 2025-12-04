@@ -1,10 +1,8 @@
-// Input Manager - Handles keyboard, mouse, and touch controls
+// Input Manager - Handles touch/mouse/keyboard input for player movement
 
 export class InputManager {
-    constructor(canvas, skillCallback, debugToggleCallback) {
+    constructor(canvas) {
         this.canvas = canvas;
-        this.skillCallback = skillCallback;
-        this.debugToggleCallback = debugToggleCallback;
 
         // Touch/Mouse joystick state
         this.input = {
@@ -53,20 +51,20 @@ export class InputManager {
             }
         };
 
-        const end = () => this.input.active = false;
+        const end = () => (this.input.active = false);
 
         // Mouse events
-        this.canvas.addEventListener('mousedown', e => start(e.clientX, e.clientY));
-        window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+        this.canvas.addEventListener('mousedown', (e) => start(e.clientX, e.clientY));
+        window.addEventListener('mousemove', (e) => move(e.clientX, e.clientY));
         window.addEventListener('mouseup', end);
 
         // Touch events
-        this.canvas.addEventListener('touchstart', e => {
+        this.canvas.addEventListener('touchstart', (e) => {
             if (e.target === this.canvas) e.preventDefault();
             start(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: false });
 
-        window.addEventListener('touchmove', e => {
+        window.addEventListener('touchmove', (e) => {
             e.preventDefault();
             if (e.touches[0]) move(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: false });
@@ -74,21 +72,14 @@ export class InputManager {
         window.addEventListener('touchend', end);
 
         // Keyboard events
-        window.addEventListener('keydown', e => {
-            // Skill hotkeys
-            if (e.key === '1') this.skillCallback('nitro');
-            if (e.key === '2') this.skillCallback('flare');
-            if (e.key === '3') this.skillCallback('repair');
-            if (e.key === '0') this.debugToggleCallback();
-
-            // Arrow keys
+        window.addEventListener('keydown', (e) => {
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                 e.preventDefault();
                 this.keys[e.key] = true;
             }
         });
 
-        window.addEventListener('keyup', e => {
+        window.addEventListener('keyup', (e) => {
             if (this.keys.hasOwnProperty(e.key)) {
                 this.keys[e.key] = false;
             }
@@ -101,9 +92,5 @@ export class InputManager {
 
     getKeyboardInput() {
         return this.keys;
-    }
-
-    isKeyPressed(key) {
-        return this.keys[key] === true;
     }
 }

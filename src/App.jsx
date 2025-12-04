@@ -1,0 +1,142 @@
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import useUIStore from './stores/useUIStore';
+import LoadingScreen from './components/screens/LoadingScreen';
+import MainMenu from './components/screens/MainMenu';
+import SettingsScreen from './components/screens/SettingsScreen';
+import LeaderboardScreen from './components/screens/LeaderboardScreen';
+import TasksScreen from './components/screens/TasksScreen';
+import SavesScreen from './components/screens/SavesScreen';
+import GameScreen from './components/screens/GameScreen';
+
+function App() {
+    const currentScreen = useUIStore((state) => state.currentScreen);
+    const setScreen = useUIStore((state) => state.setScreen);
+
+    // Initialize Telegram WebApp
+    useEffect(() => {
+        if (window.Telegram?.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+
+            // Disable vertical swipes (requires version 7.7+)
+            if (tg.version && parseFloat(tg.version) >= 7.7) {
+                tg.disableVerticalSwipes();
+            }
+
+            // Enable closing confirmation (requires version 6.2+)
+            if (tg.version && parseFloat(tg.version) >= 6.2) {
+                tg.enableClosingConfirmation();
+            }
+        }
+    }, []);
+
+    // Simulate loading
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            // Check if we need to auto-start game (after loading save)
+            const startGame = localStorage.getItem('yacht-start-game');
+            if (startGame === 'true') {
+                localStorage.removeItem('yacht-start-game');
+                setScreen('game');
+            } else {
+                setScreen('menu');
+            }
+        }, 1500);
+
+        return () => clearTimeout(timer);
+    }, [setScreen]);
+
+    return (
+        <div className="w-full h-full overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+            <AnimatePresence mode="wait">
+                {currentScreen === 'loading' && (
+                    <motion.div
+                        key="loading"
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <LoadingScreen />
+                    </motion.div>
+                )}
+
+                {currentScreen === 'menu' && (
+                    <motion.div
+                        key="menu"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <MainMenu />
+                    </motion.div>
+                )}
+
+                {currentScreen === 'game' && (
+                    <motion.div
+                        key="game"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="w-full h-full"
+                    >
+                        <GameScreen />
+                    </motion.div>
+                )}
+
+                {currentScreen === 'settings' && (
+                    <motion.div
+                        key="settings"
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -50 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <SettingsScreen />
+                    </motion.div>
+                )}
+
+                {currentScreen === 'leaderboard' && (
+                    <motion.div
+                        key="leaderboard"
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -50 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <LeaderboardScreen />
+                    </motion.div>
+                )}
+
+                {currentScreen === 'tasks' && (
+                    <motion.div
+                        key="tasks"
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -50 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <TasksScreen />
+                    </motion.div>
+                )}
+
+                {currentScreen === 'saves' && (
+                    <motion.div
+                        key="saves"
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -50 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <SavesScreen />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+export default App;
