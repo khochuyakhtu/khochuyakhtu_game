@@ -114,6 +114,26 @@ export class Game {
             // Повний скид стану гравця (гроші, позиція, температура, тощо)
             state.resetPlayer();
             console.log('Player reset, money after:', state.player.money);
+
+            // Apply bonuses for completed subscription tasks
+            let totalBonus = 0;
+            const channel1Rewarded = localStorage.getItem('channel1_rewarded') === 'true';
+            const channel2Rewarded = localStorage.getItem('channel2_rewarded') === 'true';
+
+            if (channel1Rewarded) {
+                totalBonus += 100;
+                console.log('Channel 1 task completed: +100$');
+            }
+
+            if (channel2Rewarded) {
+                totalBonus += 100;
+                console.log('Channel 2 task completed: +100$');
+            }
+
+            if (totalBonus > 0) {
+                state.addMoney(totalBonus);
+                console.log(`Total task bonus applied: +${totalBonus}$`);
+            }
         } else {
             console.log('Skipping reset, keeping saved data');
         }
