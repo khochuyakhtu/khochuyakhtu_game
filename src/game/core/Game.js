@@ -85,9 +85,7 @@ export class Game {
         };
 
         // Reset game state
-        // Reset game state
-        this.gameTime = 0;
-        this.distanceTraveled = 0;
+        // gameTime and distanceTraveled initialization moved to logic block below
         this.dayPhase = 0;
         this.currentBiome = CONFIG.biomes[0];
         this.gunnerLastShot = 0;
@@ -113,6 +111,10 @@ export class Game {
         if (!isRecentLoad) {
             // Повний скид стану гравця (гроші, позиція, температура, тощо)
             state.resetPlayer();
+            // Reset game stats strictly on new game
+            this.gameTime = 0;
+            this.distanceTraveled = 0;
+
             console.log('Player reset, money after:', state.player.money);
 
             // Apply bonuses for completed subscription tasks
@@ -136,6 +138,11 @@ export class Game {
             }
         } else {
             console.log('Skipping reset, keeping saved data');
+            // Restore game stats from store
+            const gameState = state.gameState;
+            this.gameTime = gameState.gameTime || 0;
+            this.distanceTraveled = gameState.distanceTraveled || 0;
+            this.dayPhase = (this.gameTime % CONFIG.dayDuration) / CONFIG.dayDuration;
         }
 
         // Update position for game start
@@ -211,6 +218,14 @@ export class Game {
             entities: this.entities,
             gameTime: this.gameTime
         });
+
+        // Sync stats to store periodically (every 1 sec / 60 frames)
+        if (this.gameTime % 60 === 0) {
+            state.updateGameState({
+                gameTime: this.gameTime,
+                distanceTraveled: this.distanceTraveled
+            });
+        }
 
         // Update camera
         this.camY = player.y - window.innerHeight / 2;
@@ -615,10 +630,22 @@ export class Game {
 
     die(reason) {
         const state = this.gameStore.getState();
+
+        // Final sync of stats
+        state.updateGameState({
+            gameTime: this.gameTime,
+            distanceTraveled: this.distanceTraveled
+        });
+
         state.updatePlayer({ isDead: true });
         console.log("Game Over:", reason);
 
-        // Save score to leaderboard
+        // Auto-save to cloud to record leaderboard stats
+        state.saveToCloud().then(success => {
+            if (success) console.log('Death stats saved to cloud');
+        });
+
+        // Save score to leaderboard (local)
         const settingsStore = window.__settingsStore__;
         if (settingsStore) {
             const score = Math.floor(this.distanceTraveled);

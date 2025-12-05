@@ -197,8 +197,11 @@ export default function GarageModal() {
                     exit={{ scale: 0.9, opacity: 0 }}
                     style={{
                         WebkitOverflowScrolling: 'touch',
-                        overscrollBehavior: 'contain'
+                        overscrollBehavior: 'contain',
+                        touchAction: 'pan-y'
                     }}
+                    // Ensure touches propagate for scrolling
+                    onPointerDown={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
                     <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">

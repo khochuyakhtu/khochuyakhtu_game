@@ -65,8 +65,10 @@ export class InputManager {
         }, { passive: false });
 
         window.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if (e.touches[0]) move(e.touches[0].clientX, e.touches[0].clientY);
+            if (this.input.active) {
+                e.preventDefault();
+                if (e.touches[0]) move(e.touches[0].clientX, e.touches[0].clientY);
+            }
         }, { passive: false });
 
         window.addEventListener('touchend', end);
