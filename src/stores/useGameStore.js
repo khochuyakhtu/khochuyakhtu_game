@@ -325,15 +325,43 @@ const useGameStore = create(
                 gameState: state.gameState
             }),
             merge: (persistedState, currentState) => {
-                // Глибоке злиття збереженого стану з поточним
+                // Deep merge saved state with current state
                 if (!persistedState) return currentState;
 
                 console.log('Merging persisted state:', persistedState);
 
+                // Migrate old saves
+                const migratedPlayer = { ...currentState.player, ...persistedState.player };
+
+                // Ensure crew has all members (add quartermaster if missing)
+                if (migratedPlayer.crew) {
+                    migratedPlayer.crew = {
+                        ...currentState.player.crew,
+                        ...migratedPlayer.crew,
+                        quartermaster: migratedPlayer.crew.quartermaster || { hired: false, level: 0 }
+                    };
+                }
+
+                // Fix inventory size based on quartermaster level
+                let migratedInventory = persistedState.inventory || currentState.inventory;
+                const quartermasterLevel = migratedPlayer.crew?.quartermaster?.level || 0;
+                const expectedInventorySize = 10 + quartermasterLevel;
+
+                if (migratedInventory.length !== expectedInventorySize) {
+                    console.log(`Migrating inventory from ${migratedInventory.length} to ${expectedInventorySize} slots`);
+                    const newInventory = Array(expectedInventorySize).fill(null);
+                    migratedInventory.forEach((item, index) => {
+                        if (index < expectedInventorySize) {
+                            newInventory[index] = item;
+                        }
+                    });
+                    migratedInventory = newInventory;
+                }
+
                 return {
                     ...currentState,
-                    player: { ...currentState.player, ...persistedState.player },
-                    inventory: persistedState.inventory || currentState.inventory,
+                    player: migratedPlayer,
+                    inventory: migratedInventory,
                     equip: { ...currentState.equip, ...persistedState.equip },
                     gameState: { ...currentState.gameState, ...persistedState.gameState }
                 };

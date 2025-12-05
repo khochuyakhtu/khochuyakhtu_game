@@ -231,7 +231,10 @@ export default function GarageModal() {
 
                     {/* Crew Tab */}
                     {activeTab === 'crew' && (
-                        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll">
+                        <div
+                            className="space-y-3 max-h-[60vh] overflow-y-auto pr-2"
+                            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+                        >
                             <h3 className="text-slate-300 text-sm uppercase tracking-wider font-bold sticky top-0 bg-slate-900 pb-2 z-10">
                                 Найняти Екіпаж
                             </h3>
