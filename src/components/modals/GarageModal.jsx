@@ -143,6 +143,10 @@ export default function GarageModal() {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
+                    style={{
+                        WebkitOverflowScrolling: 'touch',
+                        overscrollBehavior: 'contain'
+                    }}
                 >
                     {/* Header */}
                     <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
@@ -232,14 +236,7 @@ export default function GarageModal() {
 
                     {/* Crew Tab */}
                     {activeTab === 'crew' && (
-                        <div
-                            className="space-y-3 max-h-[60vh] overflow-y-scroll pr-2"
-                            style={{
-                                WebkitOverflowScrolling: 'touch',
-                                touchAction: 'pan-y',
-                                overscrollBehavior: 'contain'
-                            }}
-                        >
+                        <div className="space-y-3 pr-2">
                             <h3 className="text-slate-300 text-sm uppercase tracking-wider font-bold sticky top-0 bg-slate-900 pb-2 z-10">
                                 Найняти Екіпаж
                             </h3>
