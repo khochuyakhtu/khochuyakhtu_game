@@ -123,10 +123,11 @@ export default function GarageModal() {
         setShowSaveSlots(true);
     };
 
+    // Safety check for crew members (migration compatibility)
     const crewList = Object.keys(CONFIG.crewTypes).map((key) => ({
         ...CONFIG.crewTypes[key],
         key,
-        member: player.crew[key]
+        member: (player.crew && player.crew[key]) || { hired: false, level: 0 }
     }));
 
     return (
@@ -232,19 +233,25 @@ export default function GarageModal() {
                     {/* Crew Tab */}
                     {activeTab === 'crew' && (
                         <div
-                            className="space-y-3 max-h-[60vh] overflow-y-auto pr-2"
-                            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+                            className="space-y-3 max-h-[60vh] overflow-y-scroll pr-2"
+                            style={{
+                                WebkitOverflowScrolling: 'touch',
+                                touchAction: 'pan-y',
+                                overscrollBehavior: 'contain'
+                            }}
                         >
                             <h3 className="text-slate-300 text-sm uppercase tracking-wider font-bold sticky top-0 bg-slate-900 pb-2 z-10">
                                 Найняти Екіпаж
                             </h3>
 
                             {crewList.map((crew) => {
-                                const cost = crew.member.hired
-                                    ? CONFIG.crewUpgradeCosts[crew.member.level] || 5000
+                                // Safety checks
+                                const memberLevel = crew.member?.level || 0;
+                                const cost = crew.member?.hired
+                                    ? (CONFIG.crewUpgradeCosts && CONFIG.crewUpgradeCosts[memberLevel]) || 5000
                                     : 500;
-                                const maxLevel = crew.member.level >= 10;
-                                const buttonLabel = crew.member.hired
+                                const maxLevel = memberLevel >= 10;
+                                const buttonLabel = crew.member?.hired
                                     ? maxLevel ? 'MAX' : `$${cost}`
                                     : '$500';
                                 const buttonDisabled = maxLevel;
