@@ -32,7 +32,7 @@ export default function Item({ item, index }) {
             <span className="select-none">{partConfig.icon}</span>
             {item.tier > 0 && (
                 <span className="absolute top-0 right-0 text-[8px] font-bold bg-black/50 px-1 rounded">
-                    {item.tier}
+                    {item.tier}/20
                 </span>
             )}
         </motion.div>

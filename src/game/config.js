@@ -2,10 +2,10 @@
 
 export const CONFIG = {
     biomes: [
-        { name: "Тропіки", color: "#0891b2", danger: 1, temp: 25, startY: 0, weather: 'sun' },
-        { name: "Атлантика", color: "#1e40af", danger: 3, temp: 10, startY: -5000, weather: 'rain' },
-        { name: "Північне море", color: "#1e3a8a", danger: 5, temp: 0, startY: -15000, weather: 'storm' },
-        { name: "Арктика", color: "#0f172a", danger: 8, temp: -20, startY: -30000, weather: 'snow' }
+        { name: 'Тропіки', startY: 0, danger: 1, temp: 25 },
+        { name: 'Атлантика', startY: -50000, danger: 3, temp: 10 },
+        { name: 'Північне море', startY: -150000, danger: 5, temp: -5 },
+        { name: 'Арктика', startY: -300000, danger: 8, temp: -20 }
     ],
     partTypes: {
         'hull': { icon: '🛡️', name: 'Броня', bonus: 'Armor' },
@@ -14,18 +14,41 @@ export const CONFIG = {
         'magnet': { icon: '🧲', name: 'Магніт', bonus: 'Range' },
         'radar': { icon: '📡', name: 'Радар', bonus: 'Vision' }
     },
-    tierColors: ['#9ca3af', '#4ade80', '#60a5fa', '#c084fc', '#facc15', '#f87171', '#22d3ee', '#ffffff'],
+    tierColors: [
+        '#9ca3af', // 0 - Gray
+        '#4ade80', // 1 - Green
+        '#60a5fa', // 2 - Blue
+        '#c084fc', // 3 - Purple
+        '#facc15', // 4 - Yellow
+        '#f87171', // 5 - Red
+        '#22d3ee', // 6 - Cyan
+        '#ffffff', // 7 - White
+        '#fbbf24', // 8 - Amber
+        '#a78bfa', // 9 - Violet
+        '#fb923c', // 10 - Orange
+        '#34d399', // 11 - Emerald
+        '#f472b6', // 12 - Pink
+        '#818cf8', // 13 - Indigo
+        '#fde047', // 14 - Bright Yellow
+        '#e879f9', // 15 - Fuchsia
+        '#2dd4bf', // 16 - Teal
+        '#fb7185', // 17 - Rose
+        '#a3e635', // 18 - Lime
+        '#c026d3', // 19 - Magenta
+        '#fcd34d'  // 20 - Gold
+    ],
     baseCost: 10,
     moneyValue: 5,
     dayDuration: 3600,
     crewTypes: {
         mechanic: { icon: '👨‍🔧', name: 'Механік', desc: 'Повільно відновлює температуру' },
-        navigator: { icon: '🧭', name: 'Штурман', desc: 'Збільшує огляд радара на 50%' },
+        navigator: { icon: '🧭', name: 'Штурман', desc: 'Збільшує огляд радара' },
         doctor: { icon: '👨‍⚕️', name: 'Лікар', desc: 'Резистентність до холоду та шанс уникнути смерті' },
         merchant: { icon: '💼', name: 'Торговець', desc: 'Знижує ціни в магазині' },
-        gunner: { icon: '🔫', name: 'Канонір', desc: 'Автоматично стріляє у ворогів' }
+        gunner: { icon: '🔫', name: 'Канонір', desc: 'Автоматично стріляє у ворогів' },
+        quartermaster: { icon: '📦', name: 'Завгосп', desc: 'Додає +1 слот на складі за рівень' }
     },
-    crewUpgradeCosts: [500, 750, 1000, 1500, 2500] // Level 1-5 costs
+    crewUpgradeCosts: [500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000] // Level 1-10 costs
 };
 
 export const Haptics = {

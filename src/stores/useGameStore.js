@@ -27,7 +27,8 @@ const useGameStore = create(
                     navigator: { hired: false, level: 0 },
                     doctor: { hired: false, level: 0 },
                     merchant: { hired: false, level: 0 },
-                    gunner: { hired: false, level: 0 }
+                    gunner: { hired: false, level: 0 },
+                    quartermaster: { hired: false, level: 0 }
                 },
                 skills: {
                     nitro: { active: false, cd: 0, max: 600, timer: 0 },
@@ -96,9 +97,10 @@ const useGameStore = create(
                 const { player, inventory } = state;
                 let cost = 10; // BASE
 
-                // Merchant discount
+                // Merchant discount - rebalanced for 10 levels
+                // Level 1: 2.5% discount, Level 10: 25% discount
                 if (player.crew.merchant.hired) {
-                    const discount = player.crew.merchant.level * 0.05;
+                    const discount = player.crew.merchant.level * 0.025;
                     cost = Math.floor(cost * (1 - discount));
                 }
 
@@ -128,7 +130,7 @@ const useGameStore = create(
                 if (item1 && item2 &&
                     item1.type === item2.type &&
                     item1.tier === item2.tier &&
-                    item1.tier < 7) {
+                    item1.tier < 20) {
                     // Merge: upgrade tier
                     state.inventory[idx1].tier += 1;
                     state.inventory[idx2] = null;
@@ -177,15 +179,25 @@ const useGameStore = create(
                         state.player.money -= cost;
                         crewMember.hired = true;
                         crewMember.level = 1;
+
+                        // Quartermaster adds inventory slot
+                        if (type === 'quartermaster') {
+                            state.inventory.push(null);
+                        }
                     }
-                } else if (crewMember.level < 5) {
-                    // Upgrade
-                    const upgradeCosts = [500, 750, 1000, 1500, 2500];
+                } else if (crewMember.level < 10) {
+                    // Upgrade (levels 1-10)
+                    const upgradeCosts = [500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000];
                     cost = upgradeCosts[crewMember.level];
 
                     if (state.player.money >= cost) {
                         state.player.money -= cost;
                         crewMember.level += 1;
+
+                        // Quartermaster adds inventory slot on level up
+                        if (type === 'quartermaster') {
+                            state.inventory.push(null);
+                        }
                     }
                 }
             }),
@@ -205,12 +217,17 @@ const useGameStore = create(
                 const equipped = Object.values(equip).filter(e => e !== null);
                 player.isYacht = equipped.length === 5;
 
-                // Apply bonuses
-                if (equip.engine) player.speedMult += (equip.engine.tier || 0) * 0.2;
+                // Apply bonuses - rebalanced for 20 tiers
+                // Engine: Tier 1 = +10% speed, Tier 20 = +200% speed
+                if (equip.engine) player.speedMult += (equip.engine.tier || 0) * 0.1;
+                // Hull: Tier = Armor level (1:1 ratio)
                 if (equip.hull) player.armorLvl = (equip.hull.tier || 0);
+                // Cabin: Tier = Heat resist level +1
                 if (equip.cabin) player.heatResist = (equip.cabin.tier || 0) + 1;
-                if (equip.magnet) player.pickupRange += (equip.magnet.tier || 0) * 0.5;
-                if (equip.radar) player.radarRange = 1 + ((equip.radar.tier || 0) * 0.5);
+                // Magnet: Tier 1 = +25%, Tier 20 = +500%
+                if (equip.magnet) player.pickupRange += (equip.magnet.tier || 0) * 0.25;
+                // Radar: Tier 1 = 1.25x, Tier 20 = 6x
+                if (equip.radar) player.radarRange = 1 + ((equip.radar.tier || 0) * 0.25);
             }),
 
             autoMerge: () => {
@@ -227,7 +244,7 @@ const useGameStore = create(
 
                             if (inventory[i].type === inventory[j].type &&
                                 inventory[i].tier === inventory[j].tier &&
-                                inventory[i].tier < 7) {
+                                inventory[i].tier < 20) {
                                 inventory[i].tier += 1;
                                 inventory[j] = null;
                                 merged = true;
@@ -261,7 +278,8 @@ const useGameStore = create(
                         navigator: { hired: false, level: 0 },
                         doctor: { hired: false, level: 0 },
                         merchant: { hired: false, level: 0 },
-                        gunner: { hired: false, level: 0 }
+                        gunner: { hired: false, level: 0 },
+                        quartermaster: { hired: false, level: 0 }
                     },
                     skills: {
                         nitro: { active: false, cd: 0, max: 600, timer: 0 },

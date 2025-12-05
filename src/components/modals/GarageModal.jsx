@@ -80,7 +80,7 @@ export default function GarageModal() {
             if (item1 && item2 &&
                 item1.type === item2.type &&
                 item1.tier === item2.tier &&
-                item1.tier < 7) {
+                item1.tier < 20) {
                 // Merge!
                 mergeItems(fromIdx, toIdx);
                 recalcStats();
@@ -231,16 +231,16 @@ export default function GarageModal() {
 
                     {/* Crew Tab */}
                     {activeTab === 'crew' && (
-                        <div className="space-y-3">
-                            <h3 className="text-slate-300 text-sm uppercase tracking-wider font-bold">
+                        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll">
+                            <h3 className="text-slate-300 text-sm uppercase tracking-wider font-bold sticky top-0 bg-slate-900 pb-2 z-10">
                                 Найняти Екіпаж
                             </h3>
 
                             {crewList.map((crew) => {
                                 const cost = crew.member.hired
-                                    ? CONFIG.crewUpgradeCosts[crew.member.level] || 2500
+                                    ? CONFIG.crewUpgradeCosts[crew.member.level] || 5000
                                     : 500;
-                                const maxLevel = crew.member.level >= 5;
+                                const maxLevel = crew.member.level >= 10;
                                 const buttonLabel = crew.member.hired
                                     ? maxLevel ? 'MAX' : `$${cost}`
                                     : '$500';

@@ -34,7 +34,7 @@ export default function GameGrid({ standalone = true }) {
         if (item1 && item2 &&
             item1.type === item2.type &&
             item1.tier === item2.tier &&
-            item1.tier < 7) {
+            item1.tier < 20) {
             // Merge!
             mergeItems(fromIdx, toIdx);
 

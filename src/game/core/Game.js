@@ -277,11 +277,12 @@ export class Game {
             playerUpdates.flareActive = false;
         }
 
-        // Passive effects (mechanic)
+        // Passive effects (mechanic) - rebalanced for 10 levels
+        // Level 1: +0.01/frame, Level 10: +0.1/frame
         let newBodyTemp = player.bodyTemp;
         if (player.crew.mechanic.hired) {
             if (newBodyTemp < 36.6 && newBodyTemp > 30) {
-                newBodyTemp += 0.02 * player.crew.mechanic.level;
+                newBodyTemp += 0.01 * player.crew.mechanic.level;
             }
         }
 
@@ -298,9 +299,10 @@ export class Game {
             tempLoss *= Math.max(0.2, 1 - player.heatResist * 0.15);
         }
 
-        // Doctor reduces cold damage
+        // Doctor reduces cold damage - rebalanced for 10 levels
+        // Level 1: -7.5% tempLoss, Level 10: -75% tempLoss (max at level 6+ = -75%)
         if (player.crew.doctor.hired) {
-            tempLoss *= Math.max(0.2, 1 - player.crew.doctor.level * 0.15);
+            tempLoss *= Math.max(0.25, 1 - player.crew.doctor.level * 0.075);
         }
 
         newBodyTemp -= tempLoss;
@@ -308,8 +310,9 @@ export class Game {
 
         // Check hypothermia
         if (newBodyTemp <= 28) {
-            // Doctor може спасти
-            if (player.crew.doctor.hired && Math.random() < player.crew.doctor.level * 0.15) {
+            // Doctor can save - rebalanced for 10 levels
+            // Level 1: 7.5% chance, Level 10: 75% chance
+            if (player.crew.doctor.hired && Math.random() < player.crew.doctor.level * 0.075) {
                 playerUpdates.bodyTemp = 30;
                 playerUpdates.invulnerable = 180;
             } else {
@@ -718,7 +721,7 @@ export class Game {
         this.mission = {
             tx,
             ty,
-            reward: 1000 + Math.floor(Math.abs(player.y) / 10)
+            reward: 200 + Math.floor(Math.abs(player.y) / 100)
         };
 
         state.updateGameState({ mission: this.mission });

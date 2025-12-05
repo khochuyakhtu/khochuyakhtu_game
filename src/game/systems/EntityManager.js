@@ -6,8 +6,8 @@ export class EntityManager {
         const { player, entities, currentBiome, gameTime } = game;
         const spawnY = player.y - window.innerHeight;
 
-        // Coins
-        if (entities.coins.length < 15 && Math.random() < 0.1) {
+        // Coins - optimized limit
+        if (entities.coins.length < 8 && Math.random() < 0.08) {
             entities.coins.push({
                 x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
                 y: spawnY + Math.random() * 500,
@@ -15,26 +15,29 @@ export class EntityManager {
             });
         }
 
-        // Coffee (Temperature boost)
-        if (entities.coffee.length < 3 && Math.random() < 0.03) {
+        // Coffee (Temperature boost) - optimized limit
+        if (entities.coffee.length < 2 && Math.random() < 0.02) {
             entities.coffee.push({
                 x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
                 y: spawnY + Math.random() * 500
             });
         }
 
-        // Repair Kits
-        if (entities.repairKits.length < 2 && Math.random() < 0.015) {
+        // Repair Kits - optimized limit
+        if (entities.repairKits.length < 1 && Math.random() < 0.01) {
             entities.repairKits.push({
                 x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
                 y: spawnY + Math.random() * 500
             });
         }
 
-        // Mines
-        if (entities.mines.length < 5 + currentBiome.danger && Math.random() < 0.02) {
-            const minLvl = Math.max(0, currentBiome.danger - 2);
-            const lvl = Math.min(7, Math.floor(minLvl + Math.random() * 3));
+        // Mines - levels 0-20 based on biome (optimized limit)
+        if (entities.mines.length < 3 + Math.floor(currentBiome.danger / 2) && Math.random() < 0.015) {
+            // Level distribution based on danger:
+            // Tropics (1): 0-4, Atlantica (3): 3-9, North Sea (5): 6-14, Arctic (8): 10-20
+            const minLvl = Math.max(0, currentBiome.danger - 1);
+            const maxLvl = Math.min(20, currentBiome.danger * 2.5);
+            const lvl = Math.floor(minLvl + Math.random() * (maxLvl - minLvl + 1));
             entities.mines.push({
                 x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.2,
                 y: spawnY + Math.random() * 500,
@@ -44,8 +47,8 @@ export class EntityManager {
             });
         }
 
-        // Sharks
-        if (entities.sharks.length < Math.floor(currentBiome.danger / 3) && Math.random() < 0.005) {
+        // Sharks - optimized spawn
+        if (entities.sharks.length < Math.max(1, Math.floor(currentBiome.danger / 2)) && Math.random() < 0.01) {
             entities.sharks.push({
                 x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
                 y: spawnY - 500,
@@ -79,8 +82,8 @@ export class EntityManager {
             this.spawnKraken(game);
         }
 
-        // Pirates (Active enemies)
-        if (currentBiome.danger >= 3 && entities.pirates.length < Math.floor(currentBiome.danger / 2) && Math.random() < 0.008) {
+        // Pirates (Active enemies) - increased spawn chance
+        if (currentBiome.danger >= 3 && entities.pirates.length < Math.floor(currentBiome.danger / 2) && Math.random() < 0.012) {
             entities.pirates.push({
                 x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
                 y: spawnY - 600,
@@ -93,8 +96,8 @@ export class EntityManager {
             });
         }
 
-        // Oil Slicks (Environmental hazard)
-        if (currentBiome.danger >= 2 && entities.oilSlicks.length < 3 && Math.random() < 0.01) {
+        // Oil Slicks (Environmental hazard) - optimized limit
+        if (currentBiome.danger >= 2 && entities.oilSlicks.length < 2 && Math.random() < 0.008) {
             const radius = 80 + Math.random() * 40;
             entities.oilSlicks.push({
                 x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
