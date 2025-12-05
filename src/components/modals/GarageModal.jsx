@@ -123,9 +123,16 @@ export default function GarageModal() {
         setShowSaveSlots(true);
     };
 
-    const handleCloudSync = async () => {
+    const handleCloudSave = async () => {
         const success = await saveToCloud();
         Haptics.notify(success ? 'success' : 'error');
+    };
+
+    const handleCloudLoad = async () => {
+        if (confirm('Завантажити гру з хмари? Поточний прогрес буде втрачено.')) {
+            const success = await loadFromCloud();
+            Haptics.notify(success ? 'success' : 'error');
+        }
     };
 
     // Safety check for crew members (migration compatibility)
@@ -190,16 +197,19 @@ export default function GarageModal() {
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={handleSave}
-                                className="text-[10px] bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-white font-bold"
+                                className="text-[10px] bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-white font-bold"
                             >
                                 💾 Local
                             </button>
-                            <button
-                                onClick={handleCloudSync}
-                                className="text-[10px] bg-sky-600 hover:bg-sky-500 px-3 py-1.5 rounded text-white font-bold flex items-center gap-1"
-                            >
-                                ☁️ {gameState.lastSyncTime ? new Date(gameState.lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sync'}
-                            </button>
+                            <div className="flex bg-slate-800 rounded overflow-hidden">
+                                <button
+                                    onClick={handleCloudSave}
+                                    className="text-[10px] bg-sky-600 hover:bg-sky-500 px-3 py-1.5 text-white font-bold"
+                                    title="Зберегти на сервер"
+                                >
+                                    ☁️ Save Cloud
+                                </button>
+                            </div>
                             <button
                                 onClick={handleClose}
                                 className="text-slate-400 hover:text-white text-3xl px-2"
