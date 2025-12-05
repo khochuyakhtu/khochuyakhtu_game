@@ -191,6 +191,9 @@ export class Game {
             if (player.y <= b.startY) this.currentBiome = b;
         }
 
+        // Update crew abilities (auto-buy, auto-merge)
+        state.updateCrewAbilities();
+
         // Player movement
         this.updatePlayerMovement();
 

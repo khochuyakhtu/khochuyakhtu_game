@@ -28,7 +28,9 @@ const useGameStore = create(
                     doctor: { hired: false, level: 0 },
                     merchant: { hired: false, level: 0 },
                     gunner: { hired: false, level: 0 },
-                    quartermaster: { hired: false, level: 0 }
+                    quartermaster: { hired: false, level: 0 },
+                    supplier: { hired: false, level: 0 },
+                    engineer: { hired: false, level: 0 }
                 },
                 skills: {
                     nitro: { active: false, cd: 0, max: 600, timer: 0 },
@@ -56,7 +58,8 @@ const useGameStore = create(
                 dayPhase: 0,
                 distanceTraveled: 0,
                 currentBiome: null,
-                mission: null
+                mission: null,
+                crewTimers: { supplier: 0, engineer: 0 }
             },
 
             // Actions
@@ -202,6 +205,72 @@ const useGameStore = create(
                 }
             }),
 
+            updateCrewAbilities: () => set((state) => {
+                const { player, inventory, gameState } = state;
+
+                // --- Supplier Logic (Auto-buy) ---
+                if (player.crew.supplier.hired) {
+                    gameState.crewTimers.supplier -= 1;
+                    if (gameState.crewTimers.supplier <= 0) {
+                        const level = player.crew.supplier.level;
+                        // Level 1: 3600 frames (60s), Level 10: 600 frames (10s)
+                        const interval = Math.max(600, 3600 - (level - 1) * 330);
+
+                        const cost = 10;
+                        if (player.money >= cost) {
+                            const emptyIdx = inventory.findIndex(i => i === null);
+                            if (emptyIdx !== -1) {
+                                player.money -= cost;
+                                const types = ['hull', 'engine', 'cabin', 'magnet', 'radar'];
+                                const type = types[Math.floor(Math.random() * types.length)];
+                                inventory[emptyIdx] = {
+                                    type,
+                                    tier: 0,
+                                    id: nanoid()
+                                };
+                                gameState.crewTimers.supplier = interval;
+                            } else {
+                                // Inventory full, retry in 5s
+                                gameState.crewTimers.supplier = 300;
+                            }
+                        } else {
+                            // No money, retry in 3s
+                            gameState.crewTimers.supplier = 180;
+                        }
+                    }
+                }
+
+                // --- Engineer Logic (Auto-merge) ---
+                if (player.crew.engineer.hired) {
+                    gameState.crewTimers.engineer -= 1;
+                    if (gameState.crewTimers.engineer <= 0) {
+                        const level = player.crew.engineer.level;
+                        // Level 1: 1800 frames (30s), Level 10: 300 frames (5s)
+                        const interval = Math.max(300, 1800 - (level - 1) * 165);
+
+                        // Auto merge logic (one merge per trigger)
+                        let merged = false;
+                        for (let i = 0; i < inventory.length; i++) {
+                            if (!inventory[i]) continue;
+                            for (let j = i + 1; j < inventory.length; j++) {
+                                if (!inventory[j]) continue;
+                                if (inventory[i].type === inventory[j].type &&
+                                    inventory[i].tier === inventory[j].tier &&
+                                    inventory[i].tier < 20) {
+                                    inventory[i].tier += 1;
+                                    inventory[j] = null;
+                                    merged = true;
+                                    break;
+                                }
+                            }
+                            if (merged) break;
+                        }
+
+                        gameState.crewTimers.engineer = interval;
+                    }
+                }
+            }),
+
             recalcStats: () => set((state) => {
                 const { player, equip } = state;
 
@@ -277,9 +346,10 @@ const useGameStore = create(
                         mechanic: { hired: false, level: 0 },
                         navigator: { hired: false, level: 0 },
                         doctor: { hired: false, level: 0 },
-                        merchant: { hired: false, level: 0 },
                         gunner: { hired: false, level: 0 },
-                        quartermaster: { hired: false, level: 0 }
+                        quartermaster: { hired: false, level: 0 },
+                        supplier: { hired: false, level: 0 },
+                        engineer: { hired: false, level: 0 }
                     },
                     skills: {
                         nitro: { active: false, cd: 0, max: 600, timer: 0 },
@@ -333,12 +403,14 @@ const useGameStore = create(
                 // Migrate old saves
                 const migratedPlayer = { ...currentState.player, ...persistedState.player };
 
-                // Ensure crew has all members (add quartermaster if missing)
+                // Ensure crew has all members (add missing ones)
                 if (migratedPlayer.crew) {
                     migratedPlayer.crew = {
                         ...currentState.player.crew,
                         ...migratedPlayer.crew,
-                        quartermaster: migratedPlayer.crew.quartermaster || { hired: false, level: 0 }
+                        quartermaster: migratedPlayer.crew.quartermaster || { hired: false, level: 0 },
+                        supplier: migratedPlayer.crew.supplier || { hired: false, level: 0 },
+                        engineer: migratedPlayer.crew.engineer || { hired: false, level: 0 }
                     };
                 }
 
