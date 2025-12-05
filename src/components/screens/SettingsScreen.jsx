@@ -1,17 +1,27 @@
 import { motion } from 'framer-motion';
 import useUIStore from '../../stores/useUIStore';
 import useSettingsStore from '../../stores/useSettingsStore';
+import { cloudService } from '../../services/CloudService';
 import { Haptics } from '../../game/config';
 
 export default function SettingsScreen() {
     const setScreen = useUIStore((state) => state.setScreen);
     const { nickname, sound, vibration, setNickname, setSound, setVibration } = useSettingsStore();
 
-    const handleNicknameSave = () => {
+    const handleNicknameSave = async () => {
         const input = document.getElementById('nickname-input');
         if (input.value.trim()) {
-            setNickname(input.value.trim());
-            Haptics.notify('success');
+            const newNickname = input.value.trim();
+            setNickname(newNickname);
+
+            // Sync nickname directly with cloud
+            const success = await cloudService.saveNickname(newNickname);
+
+            if (success) {
+                Haptics.notify('success');
+            } else {
+                Haptics.notify('error');
+            }
         }
     };
 

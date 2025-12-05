@@ -93,6 +93,29 @@ class CloudService {
         }
     }
 
+    async saveNickname(nickname) {
+        if (!this.token) await this.login();
+        if (!this.token) return false;
+
+        try {
+            const res = await fetch(`${API_URL}/game/save`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId: this.user.id,
+                    nickname: nickname
+                    // No state passed, safely updates only nickname
+                })
+            });
+            return res.ok;
+        } catch (e) {
+            console.error('Save Nickname Error:', e);
+            return false;
+        }
+    }
+
     async getLeaderboard(type = 'distance') {
         try {
             const res = await fetch(`${API_URL}/leaderboard?type=${type}`);
