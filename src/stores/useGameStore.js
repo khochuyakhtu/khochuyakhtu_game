@@ -2,10 +2,62 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { nanoid } from 'nanoid';
+import { cloudService } from '../services/CloudService';
 
 const useGameStore = create(
     persist(
         immer((set, get) => ({
+            // ... (keep existing state)
+
+            // Game state (add lastSyncTime)
+            gameState: {
+                paused: true,
+                gameTime: 0,
+                dayPhase: 0,
+                distanceTraveled: 0,
+                currentBiome: null,
+                mission: null,
+                crewTimers: { supplier: 0, engineer: 0 },
+                lastSyncTime: null
+            },
+
+            // ... (keep existing actions)
+
+            // Cloud Actions
+            saveToCloud: async () => {
+                const state = get();
+                // Strip unnecessary data if needed, or send full persistent state
+                const saveData = {
+                    player: state.player,
+                    inventory: state.inventory,
+                    equip: state.equip,
+                    gameState: state.gameState
+                };
+
+                const success = await cloudService.saveGame(saveData);
+                if (success) {
+                    set((state) => {
+                        state.gameState.lastSyncTime = Date.now();
+                    });
+                }
+                return success;
+            },
+
+            loadFromCloud: async () => {
+                const cloudState = await cloudService.loadGame();
+                if (cloudState) {
+                    // Safe merge or overwrite
+                    get().loadSave(cloudState);
+                    set((state) => {
+                        state.gameState.lastSyncTime = Date.now();
+                    });
+                    return true;
+                }
+                return false;
+            },
+
+            // ... (keep existing actions)
+
             // Player state
             player: {
                 x: 0,

@@ -11,7 +11,7 @@ import SaveSlotsModal from './SaveSlotsModal';
 
 export default function GarageModal() {
     const { toggleGarage, garageTab, setGarageTab } = useUIStore();
-    const { player, buyItem, hireCrew, autoMerge, recalcStats, inventory, mergeItems, moveItem, equipItem, unequipItem } = useGameStore();
+    const { player, buyItem, hireCrew, autoMerge, recalcStats, inventory, mergeItems, moveItem, equipItem, unequipItem, saveToCloud, loadFromCloud, gameState } = useGameStore();
     const vibration = useSettingsStore((state) => state.vibration);
     const [activeTab, setActiveTab] = useState('parts');
     const [showSaveSlots, setShowSaveSlots] = useState(false);
@@ -123,6 +123,11 @@ export default function GarageModal() {
         setShowSaveSlots(true);
     };
 
+    const handleCloudSync = async () => {
+        const success = await saveToCloud();
+        Haptics.notify(success ? 'success' : 'error');
+    };
+
     // Safety check for crew members (migration compatibility)
     const crewList = Object.keys(CONFIG.crewTypes).map((key) => ({
         ...CONFIG.crewTypes[key],
@@ -137,6 +142,15 @@ export default function GarageModal() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 50
+                }}
             >
                 <motion.div
                     className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto custom-scroll"
@@ -178,7 +192,13 @@ export default function GarageModal() {
                                 onClick={handleSave}
                                 className="text-[10px] bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-white font-bold"
                             >
-                                💾 Зберегти
+                                💾 Local
+                            </button>
+                            <button
+                                onClick={handleCloudSync}
+                                className="text-[10px] bg-sky-600 hover:bg-sky-500 px-3 py-1.5 rounded text-white font-bold flex items-center gap-1"
+                            >
+                                ☁️ {gameState.lastSyncTime ? new Date(gameState.lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sync'}
                             </button>
                             <button
                                 onClick={handleClose}
