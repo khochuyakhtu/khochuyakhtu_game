@@ -14,7 +14,7 @@ const CHANNELS = [
     },
     {
         id: 'channel2',
-        name: 'Хочу Яхту - Чат',
+        name: 'Хочу Яхту - Чат гри',
         url: 'https://t.me/khochuyakhtu_game_chat',
         username: 'khochuyakhtu_game_chat',
         reward: 100,
