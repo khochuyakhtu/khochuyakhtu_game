@@ -236,6 +236,22 @@ const useGameStore = create(
                 let result = 'error';
                 set((state) => {
                     const crewMember = state.player.crew[type];
+                    // CONFIG is imported? We need to import it or move it to state ?
+                    // Actually config.js is imported in Game.js and GarageModal.
+                    // Ideally we should import it here at the top of file.
+                    // For now, I'll hardcode the extended array or assume import is added.
+                    // Let's assume I will add import in next step or use manual array here to be safe if I can't see imports.
+                    // Wait, I can see imports in previous view_file of useGameStore.js ? No, I viewed it long ago.
+                    // I'll add the cost array here to be safe and self-contained, or try to respect existing import if any.
+                    // Reviewing previous file view of useGameStore.js... 
+                    // It imports { cloudService } but not config. 
+                    // I will add the extended costs array locally to avoid breaking import scopes if I missed something.
+
+                    const upgradeCosts = [
+                        500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000,
+                        6000, 7500, 9000, 11000, 13000, 15000, 18000, 21000, 25000, 30000
+                    ];
+
                     let cost = 500;
 
                     if (!crewMember.hired) {
@@ -253,10 +269,17 @@ const useGameStore = create(
                         } else {
                             result = 'no_money';
                         }
-                    } else if (crewMember.level < 10) {
-                        // Upgrade (levels 1-10)
-                        const upgradeCosts = [500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000];
-                        cost = upgradeCosts[crewMember.level];
+                    } else if (crewMember.level < 20) {
+                        // Upgrade (levels 1-20)
+                        cost = upgradeCosts[crewMember.level]; // Level 1 uses index 1? No, level 1 uses index 1... wait.
+                        // Array above: Index 0 is 500.
+                        // If I am Level 1, I want to upgrade to Level 2.
+                        // Common logic: cost to GET to level X.
+                        // If I am Lvl 1, next is Lvl 2.
+                        // Existing code: `cost = upgradeCosts[crewMember.level]`.
+                        // If Lvl = 1, cost = upgradeCosts[1] = 750. 
+                        // If Lvl = 9, cost = upgradeCosts[9] = 5000.
+                        // Seems correct for 0-indexed array where index is "current level".
 
                         if (state.player.money >= cost) {
                             state.player.money -= cost;
@@ -278,23 +301,27 @@ const useGameStore = create(
             },
 
             updateCrewAbilities: () => set((state) => {
-                const { player, inventory, gameState } = state;
+                const { player, inventory, gameState, equip } = state;
 
                 // --- Supplier Logic (Auto-buy) ---
                 if (player.crew.supplier.hired) {
                     gameState.crewTimers.supplier -= 1;
                     if (gameState.crewTimers.supplier <= 0) {
                         const level = player.crew.supplier.level;
-                        // Level 1: 3600 frames (60s), Level 10: 600 frames (10s)
-                        const interval = Math.max(600, 3600 - (level - 1) * 330);
+                        // Level 1: 60s, Level 20: 5s
+                        const interval = Math.max(300, 3600 - (level - 1) * 170);
 
                         const cost = 10;
                         if (player.money >= cost) {
                             const emptyIdx = inventory.findIndex(i => i === null);
-                            if (emptyIdx !== -1) {
+
+                            // Filter valid types based on equipped status
+                            const allTypes = ['hull', 'engine', 'cabin', 'magnet', 'radar'];
+                            const validTypes = allTypes.filter(t => !equip[t] || equip[t].tier < 20);
+
+                            if (emptyIdx !== -1 && validTypes.length > 0) {
                                 player.money -= cost;
-                                const types = ['hull', 'engine', 'cabin', 'magnet', 'radar'];
-                                const type = types[Math.floor(Math.random() * types.length)];
+                                const type = validTypes[Math.floor(Math.random() * validTypes.length)];
                                 inventory[emptyIdx] = {
                                     type,
                                     tier: 0,
@@ -302,7 +329,7 @@ const useGameStore = create(
                                 };
                                 gameState.crewTimers.supplier = interval;
                             } else {
-                                // Inventory full, retry in 5s
+                                // Inventory full or all items maxed, retry in 5s
                                 gameState.crewTimers.supplier = 300;
                             }
                         } else {
@@ -317,8 +344,8 @@ const useGameStore = create(
                     gameState.crewTimers.engineer -= 1;
                     if (gameState.crewTimers.engineer <= 0) {
                         const level = player.crew.engineer.level;
-                        // Level 1: 1800 frames (30s), Level 10: 300 frames (5s)
-                        const interval = Math.max(300, 1800 - (level - 1) * 165);
+                        // Level 1: 30s, Level 20: 3s
+                        const interval = Math.max(180, 1800 - (level - 1) * 85);
 
                         // Auto merge logic (one merge per trigger)
                         let merged = false;

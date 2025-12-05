@@ -234,7 +234,7 @@ export default function GarageModal() {
                                 className="text-[10px] bg-sky-600 hover:bg-sky-500 px-3 py-1.5 rounded text-white font-bold flex items-center gap-2"
                                 title="Зберегти на сервер"
                             >
-                                ☁️ Save Cloud
+                                ☁️ Зберегти
                             </button>
                             <button
                                 onClick={handleClose}
@@ -304,7 +304,7 @@ export default function GarageModal() {
                                 const cost = crew.member?.hired
                                     ? (CONFIG.crewUpgradeCosts && CONFIG.crewUpgradeCosts[memberLevel]) || 5000
                                     : 500;
-                                const maxLevel = memberLevel >= 10;
+                                const maxLevel = memberLevel >= 20;
                                 const buttonLabel = crew.member?.hired
                                     ? maxLevel ? 'MAX' : `$${cost}`
                                     : '$500';
@@ -313,8 +313,8 @@ export default function GarageModal() {
                                 // Calculate bonus display
                                 let bonusText = '';
                                 if (crew.key === 'merchant') bonusText = `Знижка: ${(memberLevel * 2.5).toFixed(1)}%`;
-                                else if (crew.key === 'engineer') bonusText = `Авто-злиття: раз в ${Math.max(5, 30 - (memberLevel - 1) * 2.75).toFixed(1)}с`;
-                                else if (crew.key === 'supplier') bonusText = `Постачання: раз в ${Math.max(10, 60 - (memberLevel - 1) * 5.5).toFixed(1)}с`;
+                                else if (crew.key === 'engineer') bonusText = `Авто-злиття: раз в ${Math.max(3, 30 - (memberLevel - 1) * 1.4).toFixed(1)}с`;
+                                else if (crew.key === 'supplier') bonusText = `Постачання: раз в ${Math.max(5, 60 - (memberLevel - 1) * 2.6).toFixed(1)}с`;
                                 else if (crew.key === 'quartermaster') bonusText = `Слотів: +${memberLevel}`;
                                 // Add other descriptions as needed based on actual logic
 
@@ -330,7 +330,7 @@ export default function GarageModal() {
                                             {crew.member.hired && (
                                                 <div className="flex flex-col gap-0.5 mt-1">
                                                     <div className="text-[9px] text-green-400 font-bold">
-                                                        Рівень: {crew.member.level} / 10
+                                                        Рівень: {crew.member.level} / 20
                                                     </div>
                                                     {bonusText && (
                                                         <div className="text-[9px] text-yellow-400">

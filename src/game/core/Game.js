@@ -263,9 +263,13 @@ export class Game {
             playerUpdates.invulnerable = player.invulnerable - 1;
         }
 
+        // Flag to check if Gunner logic was here? No, Gunner is above in separate block.
+        // I will target the block that includes Gunner, Mechanic and Doctor logic.
+
         // Gunner auto-shoot
         if (player.crew.gunner.hired && player.isYacht) {
-            const shootInterval = 180 - (player.crew.gunner.level * 30);
+            // Level 1: 180 frames (3s), Level 20: 60 frames (1s)
+            const shootInterval = Math.max(60, 180 - (player.crew.gunner.level * 6));
             if (this.gameTime - this.gunnerLastShot > shootInterval) {
                 this.gunnerShoot();
             }
@@ -295,12 +299,12 @@ export class Game {
             playerUpdates.flareActive = false;
         }
 
-        // Passive effects (mechanic) - rebalanced for 10 levels
-        // Level 1: +0.01/frame, Level 10: +0.1/frame
+        // Passive effects (mechanic) - rebalanced for 20 levels
+        // Level 1: +0.005/frame, Level 20: +0.1/frame
         let newBodyTemp = player.bodyTemp;
         if (player.crew.mechanic.hired) {
             if (newBodyTemp < 36.6 && newBodyTemp > 30) {
-                newBodyTemp += 0.01 * player.crew.mechanic.level;
+                newBodyTemp += 0.005 * player.crew.mechanic.level;
             }
         }
 
@@ -317,10 +321,10 @@ export class Game {
             tempLoss *= Math.max(0.2, 1 - player.heatResist * 0.15);
         }
 
-        // Doctor reduces cold damage - rebalanced for 10 levels
-        // Level 1: -7.5% tempLoss, Level 10: -75% tempLoss (max at level 6+ = -75%)
+        // Doctor reduces cold damage - rebalanced for 20 levels
+        // Level 1: -4% tempLoss, Level 20: -80% tempLoss
         if (player.crew.doctor.hired) {
-            tempLoss *= Math.max(0.25, 1 - player.crew.doctor.level * 0.075);
+            tempLoss *= Math.max(0.2, 1 - player.crew.doctor.level * 0.04);
         }
 
         newBodyTemp -= tempLoss;
@@ -328,9 +332,9 @@ export class Game {
 
         // Check hypothermia
         if (newBodyTemp <= 28) {
-            // Doctor can save - rebalanced for 10 levels
-            // Level 1: 7.5% chance, Level 10: 75% chance
-            if (player.crew.doctor.hired && Math.random() < player.crew.doctor.level * 0.075) {
+            // Doctor can save - rebalanced for 20 levels
+            // Level 1: 4.5% chance, Level 20: 90% chance
+            if (player.crew.doctor.hired && Math.random() < player.crew.doctor.level * 0.045) {
                 playerUpdates.bodyTemp = 30;
                 playerUpdates.invulnerable = 180;
             } else {
