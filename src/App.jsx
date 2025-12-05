@@ -9,6 +9,8 @@ import TasksScreen from './components/screens/TasksScreen';
 import SavesScreen from './components/screens/SavesScreen';
 import GameScreen from './components/screens/GameScreen';
 
+import NotificationSystem from './components/ui/NotificationSystem';
+
 function App() {
     const currentScreen = useUIStore((state) => state.currentScreen);
     const setScreen = useUIStore((state) => state.setScreen);
@@ -123,6 +125,8 @@ function App() {
                     </motion.div>
                 )}
 
+
+
                 {currentScreen === 'saves' && (
                     <motion.div
                         key="saves"
@@ -135,6 +139,9 @@ function App() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Global Notifications */}
+            <NotificationSystem />
         </div>
     );
 }

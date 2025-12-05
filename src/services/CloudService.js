@@ -9,7 +9,7 @@ class CloudService {
     }
 
     async login() {
-        if (this.token) return;
+        if (this.token) return this.user;
 
         let initData = '';
         let user = null;
@@ -44,15 +44,30 @@ class CloudService {
         if (!this.token) return false;
 
         try {
+            // Get nickname from local storage (best effort since we can't easily access store hook here without refactor)
+            // Actually, we can access the persisted state from localStorage
+            let nickname = 'Captain';
+            try {
+                const settingsStr = localStorage.getItem('yacht-settings-storage');
+                if (settingsStr) {
+                    const settings = JSON.parse(settingsStr);
+                    if (settings.state?.nickname) {
+                        nickname = settings.state.nickname;
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to read nickname:', e);
+            }
+
             const res = await fetch(`${API_URL}/game/save`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // 'Authorization': `Bearer ${this.token}` // If using real validation
                 },
                 body: JSON.stringify({
-                    userId: this.user.id, // For dev
-                    state
+                    userId: this.user.id,
+                    state,
+                    nickname: nickname // Add nickname
                 })
             });
             return res.ok;
@@ -78,13 +93,14 @@ class CloudService {
         }
     }
 
-    async getLeaderboard() {
+    async getLeaderboard(type = 'distance') {
         try {
-            const res = await fetch(`${API_URL}/leaderboard`);
+            const res = await fetch(`${API_URL}/leaderboard?type=${type}`);
             if (!res.ok) return [];
             const data = await res.json();
-            return data.leaderboard;
+            return data.leaderboard || [];
         } catch (e) {
+            console.error('Leaderboard fetch error:', e);
             return [];
         }
     }

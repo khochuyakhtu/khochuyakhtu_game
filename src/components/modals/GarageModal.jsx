@@ -1,25 +1,32 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import useUIStore from '../../stores/useUIStore';
 import useGameStore from '../../stores/useGameStore';
+import useNotificationStore from '../../stores/useNotificationStore';
 import GameGrid from '../inventory/GameGrid';
 import EquipSlots from '../inventory/EquipSlots';
 import { CONFIG, Haptics } from '../../game/config';
 import useSettingsStore from '../../stores/useSettingsStore';
-import SaveSlotsModal from './SaveSlotsModal';
+
 
 export default function GarageModal() {
     const { toggleGarage, garageTab, setGarageTab } = useUIStore();
     const { player, buyItem, hireCrew, autoMerge, recalcStats, inventory, mergeItems, moveItem, equipItem, unequipItem, saveToCloud, loadFromCloud, gameState } = useGameStore();
+    const addNotification = useNotificationStore((state) => state.addNotification);
     const vibration = useSettingsStore((state) => state.vibration);
     const [activeTab, setActiveTab] = useState('parts');
-    const [showSaveSlots, setShowSaveSlots] = useState(false);
 
     const sensors = useSensors(
-        useSensor(PointerSensor, {
+        useSensor(MouseSensor, {
             activationConstraint: {
-                distance: 8,
+                distance: 10,
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 150,
+                tolerance: 5,
             },
         })
     );
@@ -100,12 +107,33 @@ export default function GarageModal() {
     };
 
     const handleBuyItem = (type) => {
-        buyItem(type);
-        recalcStats();
+        // Prevent event propagation if needed, though usually not for simple buttons
+        const result = buyItem(type);
+        if (result === 'success') {
+            recalcStats();
+            Haptics.selection();
+            addNotification('success', 'Успішно куплено!');
+        } else if (result === 'no_money') {
+            Haptics.notify('error');
+            addNotification('error', 'Недостатньо грошей!');
+        } else if (result === 'full') {
+            Haptics.notify('warning');
+            addNotification('warning', 'Склад переповнений!', 3000);
+        }
     };
 
     const handleHireCrew = (type) => {
-        hireCrew(type);
+        const result = hireCrew(type);
+        if (result === 'success') {
+            recalcStats();
+            Haptics.selection();
+            addNotification('success', 'Екіпаж покращено!');
+        } else if (result === 'no_money') {
+            Haptics.notify('error');
+            addNotification('error', 'Недостатньо грошей!');
+        } else if (result === 'max_level') {
+            addNotification('info', 'Максимальний рівень!');
+        }
     };
 
     const handleAutoMerge = () => {
@@ -119,13 +147,16 @@ export default function GarageModal() {
         toggleGarage(false);
     };
 
-    const handleSave = () => {
-        setShowSaveSlots(true);
-    };
+
 
     const handleCloudSave = async () => {
         const success = await saveToCloud();
         Haptics.notify(success ? 'success' : 'error');
+        if (success) {
+            addNotification('success', 'Збережено в хмару! ☁️');
+        } else {
+            addNotification('error', 'Помилка збереження!');
+        }
     };
 
     const handleCloudLoad = async () => {
@@ -196,20 +227,12 @@ export default function GarageModal() {
                         </div>
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={handleSave}
-                                className="text-[10px] bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-white font-bold"
+                                onClick={handleCloudSave}
+                                className="text-[10px] bg-sky-600 hover:bg-sky-500 px-3 py-1.5 rounded text-white font-bold flex items-center gap-2"
+                                title="Зберегти на сервер"
                             >
-                                💾 Local
+                                ☁️ Save Cloud
                             </button>
-                            <div className="flex bg-slate-800 rounded overflow-hidden">
-                                <button
-                                    onClick={handleCloudSave}
-                                    className="text-[10px] bg-sky-600 hover:bg-sky-500 px-3 py-1.5 text-white font-bold"
-                                    title="Зберегти на сервер"
-                                >
-                                    ☁️ Save Cloud
-                                </button>
-                            </div>
                             <button
                                 onClick={handleClose}
                                 className="text-slate-400 hover:text-white text-3xl px-2"
@@ -234,6 +257,7 @@ export default function GarageModal() {
                                         {Object.keys(CONFIG.partTypes).map((type) => (
                                             <button
                                                 key={type}
+                                                onPointerDown={(e) => e.stopPropagation()}
                                                 onClick={() => handleBuyItem(type)}
                                                 className="bg-slate-700/80 hover:bg-slate-600 text-white p-2 rounded border border-slate-600 text-2xl active:scale-95 transition-all"
                                             >
@@ -266,7 +290,7 @@ export default function GarageModal() {
 
                     {/* Crew Tab */}
                     {activeTab === 'crew' && (
-                        <div className="space-y-3 pr-2">
+                        <div className="space-y-3 pr-2 pb-10">
                             <h3 className="text-slate-300 text-sm uppercase tracking-wider font-bold sticky top-0 bg-slate-900 pb-2 z-10">
                                 Найняти Екіпаж
                             </h3>
@@ -283,6 +307,14 @@ export default function GarageModal() {
                                     : '$500';
                                 const buttonDisabled = maxLevel;
 
+                                // Calculate bonus display
+                                let bonusText = '';
+                                if (crew.key === 'merchant') bonusText = `Знижка: ${(memberLevel * 2.5).toFixed(1)}%`;
+                                else if (crew.key === 'engineer') bonusText = `Авто-злиття: раз в ${Math.max(5, 30 - (memberLevel - 1) * 2.75).toFixed(1)}с`;
+                                else if (crew.key === 'supplier') bonusText = `Постачання: раз в ${Math.max(10, 60 - (memberLevel - 1) * 5.5).toFixed(1)}с`;
+                                else if (crew.key === 'quartermaster') bonusText = `Слотів: +${memberLevel}`;
+                                // Add other descriptions as needed based on actual logic
+
                                 return (
                                     <div
                                         key={crew.key}
@@ -293,8 +325,15 @@ export default function GarageModal() {
                                             <div className="font-bold text-white">{crew.name}</div>
                                             <div className="text-[10px] text-slate-400">{crew.desc}</div>
                                             {crew.member.hired && (
-                                                <div className="text-[9px] text-green-400">
-                                                    Рівень: {crew.member.level}
+                                                <div className="flex flex-col gap-0.5 mt-1">
+                                                    <div className="text-[9px] text-green-400 font-bold">
+                                                        Рівень: {crew.member.level} / 10
+                                                    </div>
+                                                    {bonusText && (
+                                                        <div className="text-[9px] text-yellow-400">
+                                                            💎 {bonusText}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -304,7 +343,7 @@ export default function GarageModal() {
                                             className={`${buttonDisabled
                                                 ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
                                                 : 'bg-green-600 hover:bg-green-500 text-white'
-                                                } text-xs px-3 py-2 rounded font-bold transition-all active:scale-95`}
+                                                } text-xs px-3 py-2 rounded font-bold transition-all active:scale-95 min-w-[60px]`}
                                         >
                                             {buttonLabel}
                                         </button>
@@ -316,14 +355,7 @@ export default function GarageModal() {
                 </motion.div>
             </motion.div>
 
-            <AnimatePresence>
-                {showSaveSlots && (
-                    <SaveSlotsModal
-                        onClose={() => setShowSaveSlots(false)}
-                        mode="save"
-                    />
-                )}
-            </AnimatePresence>
+
         </>
     );
 }

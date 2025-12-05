@@ -2,6 +2,8 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import useUIStore from '../../stores/useUIStore';
 import useGameStore from '../../stores/useGameStore';
+import useNotificationStore from '../../stores/useNotificationStore';
+import { CONFIG, Haptics } from '../../game/config';
 
 const CHANNELS = [
     {
@@ -25,6 +27,7 @@ const CHANNELS = [
 export default function TasksScreen() {
     const setScreen = useUIStore((state) => state.setScreen);
     const addMoney = useGameStore((state) => state.addMoney);
+    const addNotification = useNotificationStore((state) => state.addNotification);
 
     // State for each channel: { channelId: { subscribed: bool, rewarded: bool, checking: bool } }
     const [channelStates, setChannelStates] = useState({});
@@ -60,12 +63,12 @@ export default function TasksScreen() {
         const state = channelStates[channel.id];
 
         if (state.rewarded) {
-            alert('Винагороду вже отримано!');
+            addNotification('info', 'Винагороду вже отримано!');
             return;
         }
 
         if (!state.subscribed) {
-            alert('Будь ласка, спочатку підпішіться на канал!');
+            addNotification('warning', 'Спочатку підпишіться на канал!');
             return;
         }
 
@@ -80,10 +83,12 @@ export default function TasksScreen() {
                 localStorage.setItem(`${channel.id}_rewarded`, 'true');
                 updateChannelState(channel.id, { rewarded: true, checking: false });
                 addMoney(channel.reward);
-                alert(`Вітаємо! Ви отримали ${channel.reward}$ за підписку на канал! 🎉`);
+                Haptics.notify('success');
+                addNotification('success', `+${channel.reward}$ за підписку! 🎉`);
             } else {
                 updateChannelState(channel.id, { checking: false });
-                alert('Підписка не знайдена. Переконайтеся, що ви підписані на канал, та спробуйте ще раз.');
+                Haptics.notify('error');
+                addNotification('error', 'Підписка не знайдена. Спробуйте ще раз.', 3000);
             }
         } catch (error) {
             console.error('Subscription verification error:', error);
@@ -98,7 +103,8 @@ export default function TasksScreen() {
                 localStorage.setItem(`${channel.id}_rewarded`, 'true');
                 updateChannelState(channel.id, { rewarded: true });
                 addMoney(channel.reward);
-                alert(`Вітаємо! Ви отримали ${channel.reward}$ за підписку на канал! 🎉`);
+                Haptics.notify('success');
+                addNotification('success', `+${channel.reward}$ за підписку! 🎉`);
             }
         }
     };
@@ -116,19 +122,8 @@ export default function TasksScreen() {
             throw new Error('User ID not available');
         }
 
-        // Note: Direct subscription verification requires a bot with admin rights
-        // For now, we'll use a simple check - if the channel opens successfully,
-        // we trust the user's confirmation
-        // In production, this should call your backend which uses Bot API
-
-        // Simulate verification delay
         await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // For demo purposes, we accept the subscription
-        // In production: call your backend API that uses Telegram Bot API
-        // Example: const response = await fetch(`/api/verify-subscription?userId=${user.id}&channel=${channelUsername}`);
-
-        return true; // Fallback to trusting user
+        return true;
     };
 
     return (

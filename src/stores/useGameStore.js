@@ -148,29 +148,37 @@ const useGameStore = create(
                 }
             }),
 
-            buyItem: (type) => set((state) => {
-                const { player, inventory } = state;
-                let cost = 10; // BASE
+            buyItem: (type) => {
+                let result = 'error';
+                set((state) => {
+                    const { player, inventory } = state;
+                    let cost = 10; // BASE
 
-                // Merchant discount - rebalanced for 10 levels
-                // Level 1: 2.5% discount, Level 10: 25% discount
-                if (player.crew.merchant.hired) {
-                    const discount = player.crew.merchant.level * 0.025;
-                    cost = Math.floor(cost * (1 - discount));
-                }
-
-                if (player.money >= cost) {
-                    const emptyIdx = inventory.findIndex(item => item === null);
-                    if (emptyIdx !== -1) {
-                        state.player.money -= cost;
-                        state.inventory[emptyIdx] = {
-                            type,
-                            tier: 0,
-                            id: nanoid()
-                        };
+                    // Merchant discount - rebalanced for 10 levels
+                    if (player.crew?.merchant?.hired) {
+                        const discount = (player.crew.merchant.level || 0) * 0.025;
+                        cost = Math.floor(cost * (1 - discount));
                     }
-                }
-            }),
+
+                    if (player.money >= cost) {
+                        const emptyIdx = inventory.findIndex(item => item === null);
+                        if (emptyIdx !== -1) {
+                            state.player.money -= cost;
+                            state.inventory[emptyIdx] = {
+                                type,
+                                tier: 0,
+                                id: nanoid()
+                            };
+                            result = 'success';
+                        } else {
+                            result = 'full';
+                        }
+                    } else {
+                        result = 'no_money';
+                    }
+                });
+                return result;
+            },
 
             moveItem: (fromIdx, toIdx) => set((state) => {
                 const temp = state.inventory[fromIdx];
@@ -224,38 +232,50 @@ const useGameStore = create(
                 }
             }),
 
-            hireCrew: (type) => set((state) => {
-                const crewMember = state.player.crew[type];
-                let cost = 500;
+            hireCrew: (type) => {
+                let result = 'error';
+                set((state) => {
+                    const crewMember = state.player.crew[type];
+                    let cost = 500;
 
-                if (!crewMember.hired) {
-                    // Initial hire
-                    if (state.player.money >= cost) {
-                        state.player.money -= cost;
-                        crewMember.hired = true;
-                        crewMember.level = 1;
+                    if (!crewMember.hired) {
+                        // Initial hire
+                        if (state.player.money >= cost) {
+                            state.player.money -= cost;
+                            crewMember.hired = true;
+                            crewMember.level = 1;
 
-                        // Quartermaster adds inventory slot
-                        if (type === 'quartermaster') {
-                            state.inventory.push(null);
+                            // Quartermaster adds inventory slot
+                            if (type === 'quartermaster') {
+                                state.inventory.push(null);
+                            }
+                            result = 'success';
+                        } else {
+                            result = 'no_money';
                         }
-                    }
-                } else if (crewMember.level < 10) {
-                    // Upgrade (levels 1-10)
-                    const upgradeCosts = [500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000];
-                    cost = upgradeCosts[crewMember.level];
+                    } else if (crewMember.level < 10) {
+                        // Upgrade (levels 1-10)
+                        const upgradeCosts = [500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000];
+                        cost = upgradeCosts[crewMember.level];
 
-                    if (state.player.money >= cost) {
-                        state.player.money -= cost;
-                        crewMember.level += 1;
+                        if (state.player.money >= cost) {
+                            state.player.money -= cost;
+                            crewMember.level += 1;
 
-                        // Quartermaster adds inventory slot on level up
-                        if (type === 'quartermaster') {
-                            state.inventory.push(null);
+                            // Quartermaster adds inventory slot on level up
+                            if (type === 'quartermaster') {
+                                state.inventory.push(null);
+                            }
+                            result = 'success';
+                        } else {
+                            result = 'no_money';
                         }
+                    } else {
+                        result = 'max_level';
                     }
-                }
-            }),
+                });
+                return result;
+            },
 
             updateCrewAbilities: () => set((state) => {
                 const { player, inventory, gameState } = state;
@@ -457,13 +477,21 @@ const useGameStore = create(
 
                 // Ensure crew has all members (add missing ones)
                 if (migratedPlayer.crew) {
+                    // Start with default crew to ensure all keys exist
+                    const defaultCrew = currentState.player.crew;
                     migratedPlayer.crew = {
-                        ...currentState.player.crew,
+                        ...defaultCrew,
                         ...migratedPlayer.crew,
-                        quartermaster: migratedPlayer.crew.quartermaster || { hired: false, level: 0 },
-                        supplier: migratedPlayer.crew.supplier || { hired: false, level: 0 },
-                        engineer: migratedPlayer.crew.engineer || { hired: false, level: 0 }
                     };
+
+                    // Deep merge specifically for objects if needed, but simple replacement is usually fine for crew structs
+                    // actually we need to make sure we don't have partial objects if that ever happened
+                    // Let's just ensure specific critical ones if they were missing in old saves
+                    ['quartermaster', 'supplier', 'engineer', 'merchant', 'doctor', 'navigator', 'mechanic', 'gunner'].forEach(role => {
+                        if (!migratedPlayer.crew[role]) {
+                            migratedPlayer.crew[role] = { ...defaultCrew[role] };
+                        }
+                    });
                 }
 
                 // Fix inventory size based on quartermaster level

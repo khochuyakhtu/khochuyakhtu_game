@@ -1,55 +1,35 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import useUIStore from '../../stores/useUIStore';
 import useGameStore from '../../stores/useGameStore';
-
-const SAVE_SLOTS_KEY = 'yacht-game-saves';
+import useNotificationStore from '../../stores/useNotificationStore';
+import { Haptics } from '../../game/config';
 
 export default function SavesScreen() {
     const setScreen = useUIStore((state) => state.setScreen);
-    const [slots, setSlots] = useState(Array(5).fill(null));
+    const [isLoadingCloud, setIsLoadingCloud] = useState(false);
 
-    useEffect(() => {
-        // Завантажуємо існуючі збереження
-        const savedData = localStorage.getItem(SAVE_SLOTS_KEY);
-        if (savedData) {
-            setSlots(JSON.parse(savedData));
+    // Get store actions
+    const loadFromCloud = useGameStore((state) => state.loadFromCloud);
+    const gameState = useGameStore((state) => state.gameState);
+    const addNotification = useNotificationStore((state) => state.addNotification);
+
+    const handleCloudLoad = async () => {
+        if (confirm('Завантажити гру з хмари? Незбережений локальний прогрес буде втрачено.')) {
+            setIsLoadingCloud(true);
+            const success = await loadFromCloud();
+            setIsLoadingCloud(false);
+
+            Haptics.notify(success ? 'success' : 'error');
+
+            if (success) {
+                // Встановлюємо timestamp завантаження
+                localStorage.setItem('yacht-load-timestamp', Date.now().toString());
+                addNotification('success', 'Успішно завантажено!');
+                setScreen('game');
+            } else {
+                addNotification('error', 'Не вдалося завантажити.', 3000);
+            }
         }
-    }, []);
-
-    const handleLoad = (slotIndex) => {
-        const saveData = slots[slotIndex];
-        if (!saveData) return;
-
-        console.log('Loading save data:', saveData);
-        console.log('Player money in save:', saveData.player?.money);
-
-        // Використовуємо setState напряму для оновлення store
-        useGameStore.setState({
-            player: { ...useGameStore.getState().player, ...saveData.player },
-            inventory: saveData.inventory,
-            equip: saveData.equip,
-            gameState: saveData.gameState
-        });
-
-        // Перераховуємо статистики
-        useGameStore.getState().recalcStats();
-
-        console.log('After load, player money:', useGameStore.getState().player.money);
-
-        // Встановлюємо timestamp завантаження
-        // Використовуємо час замість одноразового прапорця, щоб уникнути проблем з React Strict Mode (подвійний виклик)
-        localStorage.setItem('yacht-load-timestamp', Date.now().toString());
-
-        // Переходимо до гри
-        setScreen('game');
-    };
-
-    const handleDelete = (slotIndex) => {
-        const newSlots = [...slots];
-        newSlots[slotIndex] = null;
-        setSlots(newSlots);
-        localStorage.setItem(SAVE_SLOTS_KEY, JSON.stringify(newSlots));
     };
 
     const formatDate = (isoString) => {
@@ -66,76 +46,47 @@ export default function SavesScreen() {
 
     return (
         <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-y-auto">
-            <div className="max-w-2xl mx-auto p-5">
+            <div className="max-w-2xl mx-auto p-5 flex flex-col h-full">
                 {/* Заголовок */}
-                <div className="flex items-center mb-8">
+                <div className="flex items-center mb-6">
                     <button
                         onClick={() => setScreen('menu')}
                         className="bg-slate-800/50 text-white px-4 py-2 rounded-lg mr-4 hover:bg-slate-700"
                     >
                         ←
                     </button>
-                    <h2 className="text-3xl font-bold text-white">💾 Збережені ігри</h2>
+                    <h2 className="text-3xl font-bold text-white">☁️ Хмарні Збереження</h2>
                 </div>
 
-                {/* Список збережень - 5 слотів */}
-                <div className="space-y-3">
-                    {slots.map((slot, index) => (
-                        <motion.div
-                            key={index}
-                            className={`p-4 rounded-xl border ${slot ? 'bg-slate-800/70 border-slate-600' : 'bg-slate-800/30 border-slate-700 border-dashed'}`}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                    <div className="font-bold text-white text-lg">
-                                        Слот {index + 1}
-                                    </div>
-                                    {slot ? (
-                                        <div className="text-sm text-slate-400 mt-1 space-y-1">
-                                            <div className="flex gap-4">
-                                                <span>💰 ${slot.player?.money || 0}</span>
-                                                <span>🛡️ Броня: Lvl {slot.player?.armorLvl || 0}</span>
-                                            </div>
-                                            <div>📅 {formatDate(slot.savedAt)}</div>
-                                        </div>
-                                    ) : (
-                                        <div className="text-sm text-slate-500 mt-1">
-                                            Порожній слот
-                                        </div>
-                                    )}
-                                </div>
+                {/* Content */}
+                <div className="flex-1 flex flex-col items-center justify-center text-center bg-slate-800/20 rounded-xl border border-dashed border-slate-700 p-8">
+                    <div className="text-7xl mb-6 text-sky-400">☁️</div>
+                    <h3 className="text-3xl text-white font-bold mb-4">Синхронізація</h3>
+                    <p className="text-slate-300 mb-8 max-w-md text-lg leading-relaxed">
+                        Ваш прогрес прив'язаний до Telegram акаунту. <br />
+                        Завантажте гру з сервера, щоб продовжити на цьому пристрої.
+                    </p>
 
-                                <div className="flex gap-2">
-                                    {slot && (
-                                        <>
-                                            <button
-                                                onClick={() => handleLoad(index)}
-                                                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold transition-all active:scale-95"
-                                            >
-                                                Завантажити
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(index)}
-                                                className="bg-red-600/50 hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-all"
-                                                title="Видалити"
-                                            >
-                                                🗑️
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))}
+                    <button
+                        onClick={handleCloudLoad}
+                        disabled={isLoadingCloud}
+                        className="bg-sky-600 hover:bg-sky-500 text-white px-10 py-5 rounded-2xl font-bold text-xl transition-all active:scale-95 disabled:opacity-50 flex items-center gap-4 shadow-xl shadow-sky-900/30 border border-sky-400/20"
+                    >
+                        {isLoadingCloud ? <span className="animate-spin">⏳</span> : '📥'}
+                        <span>Завантажити Прогрес</span>
+                    </button>
+
+                    {gameState.lastSyncTime && (
+                        <div className="mt-8 text-sm text-slate-400 bg-slate-900/60 px-6 py-3 rounded-full border border-slate-700">
+                            🕒 Останнє збереження: <span className="text-white font-mono ml-2">{formatDate(new Date(gameState.lastSyncTime).toISOString())}</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Інформація */}
-                <div className="mt-6 p-4 bg-slate-800/30 rounded-xl border border-slate-700 text-center">
+                <div className="mt-8 p-4 bg-slate-800/30 rounded-xl border border-slate-700 text-center">
                     <p className="text-slate-400 text-sm">
-                        💡 Зберігайте гру через кнопку "Зберегти" в Майстерні під час гри
+                        💡 Щоб зберегти гру, натисніть <b>"☁️ Save Cloud"</b> у меню Гаража під час гри.
                     </p>
                 </div>
             </div>
