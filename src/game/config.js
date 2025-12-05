@@ -2,10 +2,10 @@
 
 export const CONFIG = {
     biomes: [
-        { name: 'Тропіки', startY: 0, danger: 1, temp: 25 },
-        { name: 'Атлантика', startY: -50000, danger: 3, temp: 10 },
-        { name: 'Північне море', startY: -150000, danger: 5, temp: -5 },
-        { name: 'Арктика', startY: -300000, danger: 8, temp: -20 }
+        { name: 'Тропіки', startY: 0, danger: 1, temp: 25, color: '#0ea5e9' },
+        { name: 'Атлантика', startY: -50000, danger: 3, temp: 10, color: '#1e40af' },
+        { name: 'Північне море', startY: -150000, danger: 5, temp: -5, color: '#475569' },
+        { name: 'Арктика', startY: -300000, danger: 8, temp: -20, color: '#94a3b8' }
     ],
     partTypes: {
         'hull': { icon: '🛡️', name: 'Броня', bonus: 'Armor' },

@@ -31,18 +31,23 @@ export class EntityManager {
             });
         }
 
-        // Mines - levels 0-20 based on biome (optimized limit)
+        // Mines - levels 0-20 based on biome
         if (entities.mines.length < 3 + Math.floor(currentBiome.danger / 2) && Math.random() < 0.015) {
             // Level distribution based on danger:
-            // Tropics (1): 0-4, Atlantica (3): 3-9, North Sea (5): 6-14, Arctic (8): 10-20
-            const minLvl = Math.max(0, currentBiome.danger - 1);
-            const maxLvl = Math.min(20, currentBiome.danger * 2.5);
+            // Tropics (1): 0-6
+            // Atlantica (3): 4-12
+            // North Sea (5): 10-16
+            // Arctic (8): 14-20
+            const minLvl = Math.floor(Math.max(0, (currentBiome.danger - 1) * 2));
+            const maxLvl = Math.floor(Math.min(20, minLvl + 6));
+
             const lvl = Math.floor(minLvl + Math.random() * (maxLvl - minLvl + 1));
+
             entities.mines.push({
                 x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.2,
                 y: spawnY + Math.random() * 500,
                 lvl,
-                r: 15 + (lvl * 2),
+                r: 15 + (lvl * 1.5), // Slightly reduced growth to keep size reasonable
                 pulse: 0
             });
         }

@@ -208,9 +208,13 @@ export class Game {
 
         // Update biome
         this.distanceTraveled = Math.abs(Math.min(0, player.y));
+        let newBiome = CONFIG.biomes[0];
         for (const b of CONFIG.biomes) {
-            if (player.y <= b.startY) this.currentBiome = b;
+            if (player.y <= b.startY) {
+                newBiome = b;
+            }
         }
+        this.currentBiome = newBiome;
 
         // Update crew abilities (auto-buy, auto-merge)
         state.updateCrewAbilities();
@@ -237,7 +241,8 @@ export class Game {
         if (this.gameTime % 60 === 0) {
             state.updateGameState({
                 gameTime: this.gameTime,
-                distanceTraveled: this.distanceTraveled
+                distanceTraveled: this.distanceTraveled,
+                currentBiome: this.currentBiome
             });
         }
 
@@ -701,10 +706,13 @@ export class Game {
         // Priority 2: Mines
         if (!target) {
             this.entities.mines.forEach((m, idx) => {
-                const d = Math.hypot(m.x - player.x, m.y - player.y);
-                if (d < minDist) {
-                    minDist = d;
-                    target = { entity: m, type: 'mine', index: idx };
+                // Gunner can only shoot mines if their level <= gunner level
+                if (m.lvl <= player.crew.gunner.level) {
+                    const d = Math.hypot(m.x - player.x, m.y - player.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        target = { entity: m, type: 'mine', index: idx };
+                    }
                 }
             });
         }

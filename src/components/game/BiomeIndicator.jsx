@@ -8,7 +8,8 @@ export default function BiomeIndicator() {
 
     if (!gameState || !player) return null;
 
-    const currentBiome = CONFIG.biomes.find(b => player.y <= b.startY) || CONFIG.biomes[0];
+    // Find the deepest biome that satisfies the condition (last one in the list that matches)
+    const currentBiome = [...CONFIG.biomes].reverse().find(b => player.y <= b.startY) || CONFIG.biomes[0];
     const currentIndex = CONFIG.biomes.indexOf(currentBiome);
     const nextBiome = CONFIG.biomes[currentIndex + 1];
 
