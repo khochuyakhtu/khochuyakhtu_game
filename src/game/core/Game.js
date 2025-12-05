@@ -136,6 +136,24 @@ export class Game {
                 state.addMoney(totalBonus);
                 console.log(`Total task bonus applied: +${totalBonus}$`);
             }
+
+            // Update position for NEW game
+            state.updatePlayer({
+                x: window.innerWidth / 2,
+                y: 0,
+                invulnerable: 180,
+                bodyTemp: 36.6,
+                isDead: false
+            });
+
+            // Recalculate stats based on current equipment
+            state.recalcStats();
+
+            // Reset camera
+            this.camY = -window.innerHeight / 2;
+
+            this.startMission();
+
         } else {
             console.log('Skipping reset, keeping saved data');
             // Restore game stats from store
@@ -143,24 +161,20 @@ export class Game {
             this.gameTime = gameState.gameTime || 0;
             this.distanceTraveled = gameState.distanceTraveled || 0;
             this.dayPhase = (this.gameTime % CONFIG.dayDuration) / CONFIG.dayDuration;
+
+            // Restore mission
+            if (gameState.mission) {
+                this.mission = gameState.mission;
+            } else {
+                this.startMission();
+            }
+
+            // Restore camera relative to player
+            this.camY = state.player.y - window.innerHeight / 2;
+
+            state.recalcStats();
+            state.updatePlayer({ isDead: false });
         }
-
-        // Update position for game start
-        state.updatePlayer({
-            x: window.innerWidth / 2,
-            y: 0,
-            invulnerable: 180,
-            bodyTemp: 36.6,
-            isDead: false
-        });
-
-        // Recalculate stats based on current equipment
-        state.recalcStats();
-
-        // Reset camera
-        this.camY = -window.innerHeight / 2;
-
-        this.startMission();
         this.paused = false;
 
         this.isStarting = false;

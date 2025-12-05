@@ -235,7 +235,7 @@ const useGameStore = create(
             hireCrew: (type) => {
                 let result = 'error';
                 set((state) => {
-                    const crewMember = state.player.crew[type];
+                    // Access via path or let later
                     // CONFIG is imported? We need to import it or move it to state ?
                     // Actually config.js is imported in Game.js and GarageModal.
                     // Ideally we should import it here at the top of file.
@@ -253,6 +253,15 @@ const useGameStore = create(
                     ];
 
                     let cost = 500;
+
+                    let crewMember = state.player.crew[type];
+
+                    // Auto-fix for missing crew members (migration/reset issue)
+                    if (!crewMember) {
+                        console.warn(`Crew member ${type} missing, initializing...`);
+                        crewMember = { hired: false, level: 0 };
+                        state.player.crew[type] = crewMember;
+                    }
 
                     if (!crewMember.hired) {
                         // Initial hire
@@ -445,6 +454,7 @@ const useGameStore = create(
                         mechanic: { hired: false, level: 0 },
                         navigator: { hired: false, level: 0 },
                         doctor: { hired: false, level: 0 },
+                        merchant: { hired: false, level: 0 },
                         gunner: { hired: false, level: 0 },
                         quartermaster: { hired: false, level: 0 },
                         supplier: { hired: false, level: 0 },

@@ -254,7 +254,14 @@ export default function GarageModal() {
                                 {/* Market */}
                                 <div>
                                     <h3 className="text-slate-300 text-[10px] uppercase tracking-wider font-bold mb-2">
-                                        Ринок ($10)
+                                        Ринок (${(() => {
+                                            let cost = 10;
+                                            if (player.crew?.merchant?.hired) {
+                                                const discount = (player.crew.merchant.level || 0) * 0.025;
+                                                cost = Math.floor(cost * (1 - discount));
+                                            }
+                                            return cost;
+                                        })()})
                                     </h3>
                                     <div className="grid grid-cols-5 gap-2">
                                         {Object.keys(CONFIG.partTypes).map((type) => (
