@@ -1,0 +1,60 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="skyGradient" x1="256" y1="100" x2="256" y2="350" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FFD700" />
+            <stop offset="1" stop-color="#FF8C00" />
+        </linearGradient>
+        <linearGradient id="waterGradient" x1="256" y1="300" x2="256" y2="512" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#00BFFF" />
+            <stop offset="1" stop-color="#0077BE" />
+        </linearGradient>
+        <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="10" />
+            <feOffset dx="4" dy="8" result="offsetblur" />
+            <feComponentTransfer>
+                <feFuncA type="linear" slope="0.3" />
+            </feComponentTransfer>
+            <feMerge>
+                <feMergeNode />
+                <feMergeNode in="SourceGraphic" />
+            </feMerge>
+        </filter>
+    </defs>
+
+    <g filter="url(#dropShadow)">
+        <circle cx="256" cy="256" r="200" fill="url(#skyGradient)" />
+
+        <path d="M456 256C456 366.457 366.457 456 256 456C145.543 456 56 366.457 56 256C56 240 58 225 62 210C90 240 150 220 180 250C210 280 270 230 320 260C370 290 430 200 450 210C454 225 456 240 456 256Z" fill="url(#waterGradient)" />
+
+        <path d="M150 320C180 280 330 280 360 320C360 320 340 360 256 360C170 360 150 320 150 320Z" fill="#F4A460" />
+        <path d="M160 310C190 270 320 270 350 310C350 310 330 330 256 330C180 330 160 310 160 310Z" fill="#228B22" />
+
+        <path d="M220 280L240 260L260 280V300H220V280Z" fill="#8B4513"/>
+        <path d="M220 280L240 260L260 280" stroke="#654321" stroke-width="3"/>
+        
+        <rect x="280" y="250" width="20" height="50" fill="#A9A9A9" />
+        <rect x="275" y="240" width="30" height="10" fill="#696969" />
+        <circle cx="290" cy="235" r="8" fill="#FFD700" /> <g transform="translate(180, 280)">
+            <path d="M0 0 C-5 -20, 5 -40, 0 -60" stroke="#8B4513" stroke-width="4" fill="none" />
+            <path d="M0 -60 C-10 -70, -20 -60, -25 -50 M0 -60 C10 -70, 20 -60, 25 -50 M0 -60 C0 -75, -10 -80, -15 -70 M0 -60 C0 -75, 10 -80, 15 -70" stroke="#228B22" stroke-width="3" fill="none" />
+        </g>
+        <g transform="translate(330, 290) scale(0.8)">
+            <path d="M0 0 C-5 -20, 5 -40, 0 -60" stroke="#8B4513" stroke-width="4" fill="none" />
+            <path d="M0 -60 C-10 -70, -20 -60, -25 -50 M0 -60 C10 -70, 20 -60, 25 -50 M0 -60 C0 -75, -10 -80, -15 -70 M0 -60 C0 -75, 10 -80, 15 -70" stroke="#228B22" stroke-width="3" fill="none" />
+        </g>
+
+        <g transform="translate(120, 340) rotate(5)">
+             <path d="M0 0 L40 0 L50 -20 L-10 -20 Z" fill="#FFFFFF" stroke="#555555" stroke-width="2"/> <path d="M10 -20 L10 -40 L40 -20 Z" fill="#87CEEB" /> <rect x="15" y="-30" width="15" height="10" fill="#333333"/> </g>
+
+        <ring>
+            <circle cx="256" cy="256" r="225" stroke="#FF4500" stroke-width="50" fill="none" />
+            <rect x="231" y="6" width="50" height="50" fill="white" transform="rotate(0 256 256)"/>
+            <rect x="231" y="6" width="50" height="50" fill="white" transform="rotate(90 256 256)"/>
+            <rect x="231" y="6" width="50" height="50" fill="white" transform="rotate(180 256 256)"/>
+            <rect x="231" y="6" width="50" height="50" fill="white" transform="rotate(270 256 256)"/>
+        </ring>
+        
+        <circle cx="256" cy="256" r="245" stroke="#A52A2A" stroke-width="4" fill="none" stroke-dasharray="20, 138" stroke-linecap="round"/>
+
+    </g>
+</svg>
