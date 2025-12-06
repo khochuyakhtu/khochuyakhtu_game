@@ -18,11 +18,7 @@ export default function GameOverModal() {
         }
     };
 
-    const handleReset = () => {
-        // Clear all localStorage and reload
-        localStorage.clear();
-        window.location.reload();
-    };
+
 
     return (
         <motion.div
@@ -58,10 +54,13 @@ export default function GameOverModal() {
                 </button>
 
                 <button
-                    onClick={handleReset}
-                    className="text-xs text-slate-500 hover:text-red-400"
+                    onClick={() => {
+                        toggleGameOver(false);
+                        setScreen('menu');
+                    }}
+                    className="text-xs text-slate-500 hover:text-white mt-4"
                 >
-                    Скинути прогрес
+                    Головне меню
                 </button>
             </motion.div>
         </motion.div>

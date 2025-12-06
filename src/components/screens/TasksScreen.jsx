@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import useUIStore from '../../stores/useUIStore';
 import useGameStore from '../../stores/useGameStore';
 import useNotificationStore from '../../stores/useNotificationStore';
-import { CONFIG, Haptics } from '../../game/config';
+import { Haptics } from '../../game/config';
 
 const CHANNELS = [
     {
@@ -11,7 +11,7 @@ const CHANNELS = [
         name: 'Хочу Яхту',
         url: 'https://t.me/khochuyakhtu',
         username: 'khochuyakhtu',
-        reward: 500,
+        reward: 100,
         icon: '📢'
     },
     {
