@@ -41,19 +41,40 @@ export const CONFIG = {
     moneyValue: 5,
     dayDuration: 3600,
     crewTypes: {
-        mechanic: { icon: '👨‍🔧', name: 'Механік', desc: 'Повільно відновлює температуру' },
+        mechanic: { icon: '👨‍🔧', name: 'Механік', desc: 'Стабілізує тепло: відновлює швидше, коли холодно' },
         navigator: { icon: '🧭', name: 'Штурман', desc: 'Збільшує огляд радара' },
-        doctor: { icon: '👨‍⚕️', name: 'Лікар', desc: 'Резистентність до холоду та шанс уникнути смерті' },
+        doctor: { icon: '👨‍⚕️', name: 'Лікар', desc: 'Зменшує втрати тепла та рятує від переохолодження' },
         merchant: { icon: '💼', name: 'Торговець', desc: 'Знижує ціни в магазині' },
-        gunner: { icon: '🔫', name: 'Канонір', desc: 'Автоматично стріляє у ворогів' },
+        gunner: { icon: '🔫', name: 'Канонір', desc: 'Автоматично стріляє швидше й сильніше з рівнем' },
         quartermaster: { icon: '📦', name: 'Завгосп', desc: 'Додає +1 слот на складі за рівень' },
-        supplier: { icon: '🛒', name: 'Постачальник', desc: 'Купує випадкові деталі під час плавання' },
-        engineer: { icon: '🔧', name: 'Інженер', desc: 'Автоматично об\'єднує деталі' }
-    },
-    crewUpgradeCosts: [
-        500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000,      // Levels 1-10
-        6000, 7500, 9000, 11000, 13000, 15000, 18000, 21000, 25000, 30000 // Levels 11-20
-    ]
+        supplier: { icon: '🛒', name: 'Постачальник', desc: 'Частіше купує випадкові деталі під час плавання' },
+        engineer: { icon: '🔧', name: 'Інженер', desc: 'Об\'єднує деталі автоматично та все швидше' }
+    }
+};
+
+export const getCrewUpgradeCost = (targetLevel = 1) => {
+    const level = Math.max(1, targetLevel);
+    return Math.floor(500 * Math.pow(1.25, level - 1));
+};
+
+export const getSupplierIntervalFrames = (level = 1) => {
+    const safeLevel = Math.max(1, level);
+    return Math.max(120, Math.round(3600 * Math.pow(0.92, safeLevel - 1)));
+};
+
+export const getEngineerIntervalFrames = (level = 1) => {
+    const safeLevel = Math.max(1, level);
+    return Math.max(60, Math.round(1500 * Math.pow(0.9, safeLevel - 1)));
+};
+
+export const getGunnerStats = (level = 1) => {
+    const safeLevel = Math.max(1, level);
+    return {
+        interval: Math.max(45, 150 - (safeLevel - 1) * 4),
+        range: 300 + safeLevel * 5,
+        damage: 8 + safeLevel * 2,
+        mineTier: safeLevel + 1
+    };
 };
 
 export const Haptics = {

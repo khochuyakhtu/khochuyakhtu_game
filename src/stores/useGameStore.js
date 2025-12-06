@@ -3,26 +3,22 @@ import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { nanoid } from 'nanoid';
 import { cloudService } from '../services/CloudService';
+import { getCrewUpgradeCost, getEngineerIntervalFrames, getSupplierIntervalFrames } from '../game/config';
+
+const createInitialGameState = () => ({
+    paused: true,
+    gameTime: 0,
+    dayPhase: 0,
+    distanceTraveled: 0,
+    currentBiome: null,
+    mission: null,
+    crewTimers: { supplier: 0, engineer: 0 },
+    lastSyncTime: null
+});
 
 const useGameStore = create(
     persist(
         immer((set, get) => ({
-            // ... (keep existing state)
-
-            // Game state (add lastSyncTime)
-            gameState: {
-                paused: true,
-                gameTime: 0,
-                dayPhase: 0,
-                distanceTraveled: 0,
-                currentBiome: null,
-                mission: null,
-                crewTimers: { supplier: 0, engineer: 0 },
-                lastSyncTime: null
-            },
-
-            // ... (keep existing actions)
-
             // Cloud Actions
             saveToCloud: async () => {
                 const state = get();
@@ -104,15 +100,7 @@ const useGameStore = create(
             },
 
             // Game state
-            gameState: {
-                paused: true,
-                gameTime: 0,
-                dayPhase: 0,
-                distanceTraveled: 0,
-                currentBiome: null,
-                mission: null,
-                crewTimers: { supplier: 0, engineer: 0 }
-            },
+            gameState: createInitialGameState(),
 
             // Actions
             updatePlayer: (updates) => set((state) => {
@@ -235,24 +223,7 @@ const useGameStore = create(
             hireCrew: (type) => {
                 let result = 'error';
                 set((state) => {
-                    // Access via path or let later
-                    // CONFIG is imported? We need to import it or move it to state ?
-                    // Actually config.js is imported in Game.js and GarageModal.
-                    // Ideally we should import it here at the top of file.
-                    // For now, I'll hardcode the extended array or assume import is added.
-                    // Let's assume I will add import in next step or use manual array here to be safe if I can't see imports.
-                    // Wait, I can see imports in previous view_file of useGameStore.js ? No, I viewed it long ago.
-                    // I'll add the cost array here to be safe and self-contained, or try to respect existing import if any.
-                    // Reviewing previous file view of useGameStore.js... 
-                    // It imports { cloudService } but not config. 
-                    // I will add the extended costs array locally to avoid breaking import scopes if I missed something.
-
-                    const upgradeCosts = [
-                        500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000,
-                        6000, 7500, 9000, 11000, 13000, 15000, 18000, 21000, 25000, 30000
-                    ];
-
-                    let cost = 500;
+                    let cost = getCrewUpgradeCost(1);
 
                     let crewMember = state.player.crew[type];
 
@@ -278,21 +249,13 @@ const useGameStore = create(
                         } else {
                             result = 'no_money';
                         }
-                    } else if (crewMember.level < 20) {
-                        // Upgrade (levels 1-20)
-                        cost = upgradeCosts[crewMember.level]; // Level 1 uses index 1? No, level 1 uses index 1... wait.
-                        // Array above: Index 0 is 500.
-                        // If I am Level 1, I want to upgrade to Level 2.
-                        // Common logic: cost to GET to level X.
-                        // If I am Lvl 1, next is Lvl 2.
-                        // Existing code: `cost = upgradeCosts[crewMember.level]`.
-                        // If Lvl = 1, cost = upgradeCosts[1] = 750. 
-                        // If Lvl = 9, cost = upgradeCosts[9] = 5000.
-                        // Seems correct for 0-indexed array where index is "current level".
+                    } else {
+                        const nextLevel = crewMember.level + 1;
+                        cost = getCrewUpgradeCost(nextLevel);
 
                         if (state.player.money >= cost) {
                             state.player.money -= cost;
-                            crewMember.level += 1;
+                            crewMember.level = nextLevel;
 
                             // Quartermaster adds inventory slot on level up
                             if (type === 'quartermaster') {
@@ -302,8 +265,6 @@ const useGameStore = create(
                         } else {
                             result = 'no_money';
                         }
-                    } else {
-                        result = 'max_level';
                     }
                 });
                 return result;
@@ -317,8 +278,7 @@ const useGameStore = create(
                     gameState.crewTimers.supplier -= 1;
                     if (gameState.crewTimers.supplier <= 0) {
                         const level = player.crew.supplier.level;
-                        // Level 1: 60s, Level 20: 5s
-                        const interval = Math.max(300, 3600 - (level - 1) * 170);
+                        const interval = getSupplierIntervalFrames(level);
 
                         const cost = 10;
                         if (player.money >= cost) {
@@ -353,8 +313,7 @@ const useGameStore = create(
                     gameState.crewTimers.engineer -= 1;
                     if (gameState.crewTimers.engineer <= 0) {
                         const level = player.crew.engineer.level;
-                        // Level 1: 30s, Level 20: 3s
-                        const interval = Math.max(180, 1800 - (level - 1) * 85);
+                        const interval = getEngineerIntervalFrames(level);
 
                         // Auto merge logic (one merge per trigger)
                         let merged = false;

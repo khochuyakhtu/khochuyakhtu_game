@@ -2,7 +2,7 @@
 import { Renderer } from '../systems/Renderer';
 import { InputManager } from '../systems/InputManager';
 import { EntityManager } from '../systems/EntityManager';
-import { CONFIG } from '../config';
+import { CONFIG, getGunnerStats } from '../config';
 
 export class Game {
     constructor(canvas, gameStore) {
@@ -282,15 +282,12 @@ export class Game {
             playerUpdates.invulnerable = player.invulnerable - 1;
         }
 
-        // Flag to check if Gunner logic was here? No, Gunner is above in separate block.
-        // I will target the block that includes Gunner, Mechanic and Doctor logic.
-
-        // Gunner auto-shoot
+        // Gunner auto-shoot with scaling fire rate/damage
         if (player.crew.gunner.hired && player.isYacht) {
             // Level 1: 180 frames (3s), Level 20: 60 frames (1s)
-            const shootInterval = Math.max(60, 180 - (player.crew.gunner.level * 6));
-            if (this.gameTime - this.gunnerLastShot > shootInterval) {
-                this.gunnerShoot();
+            const gunnerStats = getGunnerStats(player.crew.gunner.level || 1);
+            if (this.gameTime - this.gunnerLastShot >= gunnerStats.interval) {
+                this.gunnerShoot(gunnerStats);
             }
         }
 
@@ -318,12 +315,14 @@ export class Game {
             playerUpdates.flareActive = false;
         }
 
-        // Passive effects (mechanic) - rebalanced for 20 levels
-        // Level 1: +0.005/frame, Level 20: +0.1/frame
+        // Passive effects (mechanic) - temperature stabilisation
         let newBodyTemp = player.bodyTemp;
         if (player.crew.mechanic.hired) {
             if (newBodyTemp < 36.6 && newBodyTemp > 30) {
-                newBodyTemp += 0.005 * player.crew.mechanic.level;
+                const mechanicLevel = Math.max(1, player.crew.mechanic.level || 1);
+                const missingTemp = 36.6 - newBodyTemp;
+                const regenRate = (0.0025 + 0.0006 * mechanicLevel) * (1 + missingTemp * 0.05);
+                newBodyTemp = Math.min(36.6, newBodyTemp + regenRate);
             }
         }
 
@@ -340,10 +339,11 @@ export class Game {
             tempLoss *= Math.max(0.2, 1 - player.heatResist * 0.15);
         }
 
-        // Doctor reduces cold damage - rebalanced for 20 levels
-        // Level 1: -4% tempLoss, Level 20: -80% tempLoss
+        // Doctor reduces cold damage with scaling resistance
         if (player.crew.doctor.hired) {
-            tempLoss *= Math.max(0.2, 1 - player.crew.doctor.level * 0.04);
+            const doctorLevel = Math.max(1, player.crew.doctor.level || 1);
+            const resistance = Math.min(0.75, doctorLevel * 0.03);
+            tempLoss *= (1 - resistance);
         }
 
         newBodyTemp -= tempLoss;
@@ -351,11 +351,17 @@ export class Game {
 
         // Check hypothermia
         if (newBodyTemp <= 28) {
-            // Doctor can save - rebalanced for 20 levels
-            // Level 1: 4.5% chance, Level 20: 90% chance
-            if (player.crew.doctor.hired && Math.random() < player.crew.doctor.level * 0.045) {
-                playerUpdates.bodyTemp = 30;
-                playerUpdates.invulnerable = 180;
+            // Doctor can save based on level (caps at 80%)
+            if (player.crew.doctor.hired) {
+                const doctorLevel = Math.max(1, player.crew.doctor.level || 1);
+                const saveChance = Math.min(0.8, 0.05 + doctorLevel * 0.025);
+                if (Math.random() < saveChance) {
+                    playerUpdates.bodyTemp = 30;
+                    playerUpdates.invulnerable = 210;
+                } else {
+                    this.die("Переохолодження");
+                    return; // Don't update if dead
+                }
             } else {
                 this.die("Переохолодження");
                 return; // Don't update if dead
@@ -687,10 +693,11 @@ export class Game {
         }, 100);
     }
 
-    gunnerShoot() {
+    gunnerShoot(gunnerStats) {
         const state = this.gameStore.getState();
         const player = state.player;
-        const range = 300;
+        const stats = gunnerStats || getGunnerStats(player.crew.gunner.level || 1);
+        const range = stats.range;
         let target = null;
         let minDist = range;
 
@@ -706,8 +713,7 @@ export class Game {
         // Priority 2: Mines
         if (!target) {
             this.entities.mines.forEach((m, idx) => {
-                // Gunner can only shoot mines if their level <= gunner level
-                if (m.lvl <= player.crew.gunner.level) {
+                if (m.lvl <= stats.mineTier) {
                     const d = Math.hypot(m.x - player.x, m.y - player.y);
                     if (d < minDist) {
                         minDist = d;
@@ -747,7 +753,7 @@ export class Game {
 
             // Damage/destroy target
             if (target.type === 'pirate') {
-                target.entity.health -= 10;
+                target.entity.health -= stats.damage;
                 if (target.entity.health <= 0) {
                     this.entityManager.addExplosion(target.entity.x, target.entity.y, this.entities);
                     this.entities.pirates.splice(target.index, 1);
@@ -757,7 +763,7 @@ export class Game {
                 this.entityManager.addExplosion(target.entity.x, target.entity.y, this.entities);
                 this.entities.mines.splice(target.index, 1);
             } else if (target.type === 'shark') {
-                target.entity.flee = 300;
+                target.entity.flee = Math.max(300, 220 + stats.damage * 3);
             }
         }
     }

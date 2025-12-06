@@ -6,7 +6,7 @@ import useGameStore from '../../stores/useGameStore';
 import useNotificationStore from '../../stores/useNotificationStore';
 import GameGrid from '../inventory/GameGrid';
 import EquipSlots from '../inventory/EquipSlots';
-import { CONFIG, Haptics } from '../../game/config';
+import { CONFIG, Haptics, getCrewUpgradeCost, getEngineerIntervalFrames, getSupplierIntervalFrames } from '../../game/config';
 import useSettingsStore from '../../stores/useSettingsStore';
 
 
@@ -308,21 +308,20 @@ export default function GarageModal() {
                             {crewList.map((crew) => {
                                 // Safety checks
                                 const memberLevel = crew.member?.level || 0;
-                                const cost = crew.member?.hired
-                                    ? (CONFIG.crewUpgradeCosts && CONFIG.crewUpgradeCosts[memberLevel]) || 5000
-                                    : 500;
-                                const maxLevel = memberLevel >= 20;
-                                const buttonLabel = crew.member?.hired
-                                    ? maxLevel ? 'MAX' : `$${cost}`
-                                    : '$500';
-                                const buttonDisabled = maxLevel;
+                                const nextLevel = crew.member?.hired ? memberLevel + 1 : 1;
+                                const cost = getCrewUpgradeCost(nextLevel);
+                                const buttonLabel = `$${cost}`;
+                                const buttonDisabled = false;
 
                                 // Calculate bonus display
                                 let bonusText = '';
                                 if (crew.key === 'merchant') bonusText = `Знижка: ${(memberLevel * 2.5).toFixed(1)}%`;
-                                else if (crew.key === 'engineer') bonusText = `Авто-злиття: раз в ${Math.max(3, 30 - (memberLevel - 1) * 1.4).toFixed(1)}с`;
-                                else if (crew.key === 'supplier') bonusText = `Постачання: раз в ${Math.max(5, 60 - (memberLevel - 1) * 2.6).toFixed(1)}с`;
+                                else if (crew.key === 'engineer') bonusText = `Авто-злиття: раз в ${(getEngineerIntervalFrames(Math.max(1, memberLevel)) / 60).toFixed(1)}с`;
+                                else if (crew.key === 'supplier') bonusText = `Постачання: раз в ${(getSupplierIntervalFrames(Math.max(1, memberLevel)) / 60).toFixed(1)}с`;
                                 else if (crew.key === 'quartermaster') bonusText = `Слотів: +${memberLevel}`;
+                                else if (crew.key === 'gunner') bonusText = crew.member.hired ? `Шкода + швидкостріл: рівень ${memberLevel}` : '';
+                                else if (crew.key === 'mechanic') bonusText = crew.member.hired ? `Відновлення тепла посилено (рівень ${memberLevel})` : '';
+                                else if (crew.key === 'doctor') bonusText = crew.member.hired ? `Опір холоду та шанс врятувати: рівень ${memberLevel}` : '';
                                 // Add other descriptions as needed based on actual logic
 
                                 return (
@@ -337,7 +336,7 @@ export default function GarageModal() {
                                             {crew.member.hired && (
                                                 <div className="flex flex-col gap-0.5 mt-1">
                                                     <div className="text-[9px] text-green-400 font-bold">
-                                                        Рівень: {crew.member.level} / 20
+                                                        Рівень: {crew.member.level}
                                                     </div>
                                                     {bonusText && (
                                                         <div className="text-[9px] text-yellow-400">
