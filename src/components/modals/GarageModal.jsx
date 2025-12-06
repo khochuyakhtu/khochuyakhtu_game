@@ -112,7 +112,7 @@ export default function GarageModal() {
         if (result === 'success') {
             recalcStats();
             Haptics.selection();
-            addNotification('success', 'Успішно куплено!');
+            //addNotification('success', 'Успішно куплено!');
         } else if (result === 'no_money') {
             Haptics.notify('error');
             addNotification('error', 'Недостатньо грошей!');
