@@ -118,7 +118,7 @@ export default function LeaderboardScreen() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="font-bold text-white truncate">
-                                                {item.nickname != 'Captain' ? item.nickname : item.username}
+                                                {item.nickname || 'Невідомий'}
                                             </div>
                                         </div>
                                         <div className="font-mono font-bold text-yellow-400 text-lg">
