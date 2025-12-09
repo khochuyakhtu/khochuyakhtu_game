@@ -149,22 +149,7 @@ export default function GarageModal() {
 
 
 
-    const handleCloudSave = async () => {
-        const success = await saveToCloud();
-        Haptics.notify(success ? 'success' : 'error');
-        if (success) {
-            addNotification('success', 'Збережено в хмару! ☁️');
-        } else {
-            addNotification('error', 'Помилка збереження!');
-        }
-    };
 
-    const handleCloudLoad = async () => {
-        if (confirm('Завантажити гру з хмари? Поточний прогрес буде втрачено.')) {
-            const success = await loadFromCloud();
-            Haptics.notify(success ? 'success' : 'error');
-        }
-    };
 
     // Safety check for crew members (migration compatibility)
     const crewList = Object.keys(CONFIG.crewTypes).map((key) => ({
@@ -229,13 +214,6 @@ export default function GarageModal() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={handleCloudSave}
-                                className="text-[10px] bg-sky-600 hover:bg-sky-500 px-3 py-1.5 rounded text-white font-bold flex items-center gap-2"
-                                title="Зберегти на сервер"
-                            >
-                                ☁️ Зберегти
-                            </button>
                             <button
                                 onClick={handleClose}
                                 className="text-slate-400 hover:text-white text-3xl px-2"

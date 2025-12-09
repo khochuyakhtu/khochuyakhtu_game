@@ -8,6 +8,7 @@ const useUIStore = create((set) => ({
     garageOpen: false,
     gameOverOpen: false,
     saveSlotModalOpen: false,
+    missionsModalOpen: false,
 
     // Tab state
     garageTab: 'parts', // 'parts' | 'crew'
@@ -28,7 +29,8 @@ const useUIStore = create((set) => ({
         const modalMap = {
             'garage': 'garageOpen',
             'gameOver': 'gameOverOpen',
-            'saveSlot': 'saveSlotModalOpen'
+            'saveSlot': 'saveSlotModalOpen',
+            'missions': 'missionsModalOpen'
         };
         const stateKey = modalMap[modalName];
         if (stateKey) {

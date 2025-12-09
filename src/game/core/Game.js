@@ -200,6 +200,7 @@ export class Game {
     update() {
         const state = this.gameStore.getState();
         const player = state.player;
+        const yacht = state.yacht;
 
         if (player.isDead) return;
 
@@ -283,9 +284,9 @@ export class Game {
         }
 
         // Gunner auto-shoot with scaling fire rate/damage
-        if (player.crew.gunner.hired && player.isYacht) {
+        if (yacht.crew.gunner.hired && player.isYacht) {
             // Level 1: 180 frames (3s), Level 20: 60 frames (1s)
-            const gunnerStats = getGunnerStats(player.crew.gunner.level || 1);
+            const gunnerStats = getGunnerStats(yacht.crew.gunner.level || 1);
             if (this.gameTime - this.gunnerLastShot >= gunnerStats.interval) {
                 this.gunnerShoot(gunnerStats);
             }
@@ -315,11 +316,27 @@ export class Game {
             playerUpdates.flareActive = false;
         }
 
-        // Passive effects (mechanic) - temperature stabilisation
+        // ============================================================
+        // NEW CREW MECHANICS (Island Haven)
+        // ============================================================
+
+        // MECHANIC: Repairs yacht HP over time
+        if (yacht.crew.mechanic?.hired && player.isYacht) {
+            // yacht const already defined at top
+            const mechanicLevel = Math.max(1, yacht.crew.mechanic.level || 1);
+            const repairPerSecond = mechanicLevel * 0.5; // 0.5 HP per second per level
+            const repairPerFrame = repairPerSecond / 60;
+
+            if (yacht.hp < yacht.maxHp) {
+                state.repairYacht(repairPerFrame);
+            }
+        }
+
+        // MECHANIC (legacy): Also does temperature stabilization
         let newBodyTemp = player.bodyTemp;
-        if (player.crew.mechanic.hired) {
+        if (yacht.crew.mechanic?.hired) {
             if (newBodyTemp < 36.6 && newBodyTemp > 30) {
-                const mechanicLevel = Math.max(1, player.crew.mechanic.level || 1);
+                const mechanicLevel = Math.max(1, yacht.crew.mechanic.level || 1);
                 const missingTemp = 36.6 - newBodyTemp;
                 const regenRate = (0.0025 + 0.0006 * mechanicLevel) * (1 + missingTemp * 0.05);
                 newBodyTemp = Math.min(36.6, newBodyTemp + regenRate);
@@ -339,10 +356,11 @@ export class Game {
             tempLoss *= Math.max(0.2, 1 - player.heatResist * 0.15);
         }
 
-        // Doctor reduces cold damage with scaling resistance
-        if (player.crew.doctor.hired) {
-            const doctorLevel = Math.max(1, player.crew.doctor.level || 1);
-            const resistance = Math.min(0.75, doctorLevel * 0.03);
+        // DOCTOR: Reduces cold damage with scaling resistance
+        if (yacht.crew.doctor?.hired) {
+            const doctorLevel = Math.max(1, yacht.crew.doctor.level || 1);
+            // New formula: max 80% reduction at level 50
+            const resistance = Math.min(0.80, doctorLevel * 0.02);
             tempLoss *= (1 - resistance);
         }
 
@@ -351,9 +369,9 @@ export class Game {
 
         // Check hypothermia
         if (newBodyTemp <= 28) {
-            // Doctor can save based on level (caps at 80%)
-            if (player.crew.doctor.hired) {
-                const doctorLevel = Math.max(1, player.crew.doctor.level || 1);
+            // DOCTOR: Can save from death based on level (caps at 80%)
+            if (yacht.crew.doctor?.hired) {
+                const doctorLevel = Math.max(1, yacht.crew.doctor.level || 1);
                 const saveChance = Math.min(0.8, 0.05 + doctorLevel * 0.025);
                 if (Math.random() < saveChance) {
                     playerUpdates.bodyTemp = 30;
@@ -487,6 +505,7 @@ export class Game {
     checkCollisions() {
         const state = this.gameStore.getState();
         const player = state.player;
+        const yacht = state.yacht;
 
         const baseMagnet = player.isYacht ? 60 : 30;
         const magnetR = baseMagnet * player.pickupRange;
@@ -508,8 +527,74 @@ export class Game {
                 c.x += (player.x - c.x) * 0.1;
                 c.y += (player.y - c.y) * 0.1;
                 if (d < 20) {
-                    state.addMoney(c.val);
+                    // MERCHANT: Gold bonus
+                    let goldValue = c.val;
+                    if (yacht.crew.merchant?.hired) {
+                        const merchantLevel = Math.max(1, yacht.crew.merchant.level || 1);
+                        // 2% bonus per level, max 100% at level 50
+                        const bonusMultiplier = 1 + Math.min(1.0, merchantLevel * 0.02);
+                        goldValue = Math.floor(c.val * bonusMultiplier);
+                    }
+                    state.addMoney(goldValue);
                     this.entities.coins.splice(i, 1);
+                }
+            }
+        }
+
+        // ============================================================
+        // FLOATING RESOURCES (NEW)
+        // ============================================================
+        if (this.entities.floatingResources) {
+            for (let i = this.entities.floatingResources.length - 1; i >= 0; i--) {
+                const res = this.entities.floatingResources[i];
+                if (!isVisible(res)) continue;
+
+                const d = Math.hypot(res.x - player.x, res.y - player.y);
+                if (d < magnetR) {
+                    // Attract to player
+                    res.x += (player.x - res.x) * 0.08;
+                    res.y += (player.y - res.y) * 0.08;
+
+                    if (d < 25) {
+                        // Collect resource
+                        state.addResource(res.type, res.amount);
+
+                        // Visual feedback
+                        this.entityManager.addResourceParticles(res.x, res.y, res.type, this.entities);
+
+                        this.entities.floatingResources.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        // ============================================================
+        // SURVIVORS TO RESCUE (NEW)
+        // ============================================================
+        if (this.entities.survivors) {
+            for (let i = this.entities.survivors.length - 1; i >= 0; i--) {
+                const survivor = this.entities.survivors[i];
+                if (!isVisible(survivor)) continue;
+
+                const d = Math.hypot(survivor.x - player.x, survivor.y - player.y);
+
+                // Larger pickup range for people (need to stop and rescue)
+                if (d < 50) {
+                    // Rescue!
+                    if (survivor.isAnimal) {
+                        // Animals go to island with special effect
+                        // TODO: Add animal to island store
+                        console.log(`Rescued animal: ${survivor.name}`);
+                    } else {
+                        // Add resident to island
+                        state.addResident(survivor.profession);
+                        console.log(`Rescued: ${survivor.name} (${survivor.profession})`);
+                    }
+
+                    // Visual feedback
+                    this.entityManager.addRescueParticles(survivor.x, survivor.y, this.entities);
+
+                    this.entities.survivors.splice(i, 1);
                 }
             }
         }
@@ -624,12 +709,44 @@ export class Game {
     handleHit(lvl) {
         const state = this.gameStore.getState();
         const player = state.player;
+        const yacht = state.yacht;
 
         if (!player.isYacht) {
             this.die("Знищено");
             return;
         }
 
+        // ============================================================
+        // NAVIGATOR: Dodge chance
+        // ============================================================
+        if (yacht.crew.navigator?.hired) {
+            const navigatorLevel = Math.max(1, yacht.crew.navigator.level || 1);
+            // 1.5% dodge per level, max 75% at level 50
+            const dodgeChance = Math.min(0.75, navigatorLevel * 0.015);
+
+            if (Math.random() < dodgeChance) {
+                // Dodged! Show visual feedback
+                console.log(`Navigator dodged! (${Math.round(dodgeChance * 100)}% chance)`);
+
+                // Add dodge particles
+                for (let i = 0; i < 5; i++) {
+                    this.entities.particles.push({
+                        x: player.x + (Math.random() - 0.5) * 40,
+                        y: player.y + (Math.random() - 0.5) * 40,
+                        vx: (Math.random() - 0.5) * 3,
+                        vy: (Math.random() - 0.5) * 3,
+                        life: 20,
+                        r: 3,
+                        color: '#60a5fa' // Blue for dodge
+                    });
+                }
+
+                state.updatePlayer({ invulnerable: 15 });
+                return; // No damage taken
+            }
+        }
+
+        // Calculate damage reduction from armor
         const damage = Math.max(0, lvl - player.armorLvl);
         if (damage === 0) {
             // No damage, just invulnerability frames
@@ -637,7 +754,27 @@ export class Game {
             return;
         }
 
-        // Damage equipped item
+        // ============================================================
+        // NEW: HP-based damage system (Island Haven)
+        // ============================================================
+        // const yacht = state.yacht; // Already defined at top
+        if (yacht && yacht.maxHp > 0) {
+            // Deal damage to yacht HP
+            const newHp = Math.max(0, yacht.hp - damage * 10);
+            state.setYachtHp(newHp);
+
+            // Check if yacht destroyed
+            if (newHp <= 0) {
+                this.die("Яхта знищена");
+                return;
+            }
+
+            state.updatePlayer({ invulnerable: 60 });
+            this.entityManager.addExplosion(player.x, player.y, this.entities);
+            return;
+        }
+
+        // LEGACY: Damage equipped items (fallback)
         const equip = state.equip;
         const parts = Object.keys(equip).filter(k => equip[k] !== null);
 
@@ -696,7 +833,8 @@ export class Game {
     gunnerShoot(gunnerStats) {
         const state = this.gameStore.getState();
         const player = state.player;
-        const stats = gunnerStats || getGunnerStats(player.crew.gunner.level || 1);
+        const yacht = state.yacht;
+        const stats = gunnerStats || getGunnerStats(yacht.crew.gunner.level || 1);
         const range = stats.range;
         let target = null;
         let minDist = range;

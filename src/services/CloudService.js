@@ -39,6 +39,17 @@ class CloudService {
         }
     }
 
+    async loadConfig() {
+        try {
+            const res = await fetch(`${API_URL}/config/all`);
+            if (!res.ok) throw new Error('Failed to fetch config');
+            return await res.json();
+        } catch (e) {
+            console.error('Config Fetch Error:', e);
+            return null;
+        }
+    }
+
     async saveGame(state) {
         if (!this.token) await this.login();
         if (!this.token) return false;
@@ -127,6 +138,104 @@ class CloudService {
             return [];
         }
     }
+
+    // ================================================================
+    // ISLAND STATE SYNC
+    // ================================================================
+
+    /**
+     * Save island state to cloud
+     * @param {Object} islandState - Current island state from useGameStore
+     */
+    async saveIsland(islandState) {
+        if (!this.token) await this.login();
+        if (!this.token) return false;
+
+        try {
+            const { resources, island, resourceLimits } = islandState;
+
+            const payload = {
+                userId: this.user.id,
+                resources: resources,
+                buildings: island.buildings,
+                residents: island.residents,
+                islandMeta: {
+                    populationCap: island.populationCap,
+                    averageMood: island.averageMood,
+                    averageHealth: island.averageHealth,
+                    weather: island.weather
+                }
+            };
+
+            const res = await fetch(`${API_URL}/island/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const error = await res.json();
+                console.error('Island save error:', error);
+                return false;
+            }
+
+            console.log('Island saved successfully');
+            return true;
+        } catch (e) {
+            console.error('Island Save Error:', e);
+            return false;
+        }
+    }
+
+    /**
+     * Load island state from cloud
+     * @returns {Object|null} Island state or null if not found
+     */
+    async loadIsland() {
+        if (!this.token) await this.login();
+        if (!this.token) return null;
+
+        try {
+            const res = await fetch(`${API_URL}/island/load/${this.user.id}`);
+            if (!res.ok) return null;
+
+            const data = await res.json();
+
+            if (!data.success || !data.island) {
+                return null;
+            }
+
+            // Transform to match useGameStore structure
+            return {
+                resources: data.island.resources || {},
+                island: {
+                    buildings: data.island.buildings || [],
+                    residents: data.island.residents || [],
+                    animals: [],
+                    populationCap: data.island.populationCap || 5,
+                    averageMood: data.island.averageMood || 100,
+                    averageHealth: data.island.averageHealth || 100,
+                    weather: data.island.weather || {
+                        type: 'sunny',
+                        duration: 3600,
+                        effects: { waterBonus: 0, moodBonus: 5, canSail: true }
+                    }
+                }
+            };
+        } catch (e) {
+            console.error('Island Load Error:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Check if user has cloud island data
+     */
+    async hasCloudIsland() {
+        const island = await this.loadIsland();
+        return island !== null && (island.island.buildings.length > 0 || island.island.residents.length > 0);
+    }
 }
 
 export const cloudService = new CloudService();
+

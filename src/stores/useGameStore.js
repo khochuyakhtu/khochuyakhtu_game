@@ -3,112 +3,587 @@ import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { nanoid } from 'nanoid';
 import { cloudService } from '../services/CloudService';
-import { getCrewUpgradeCost, getEngineerIntervalFrames, getSupplierIntervalFrames } from '../game/config';
+import {
+    INITIAL_RESOURCES,
+    INITIAL_RESOURCE_LIMITS,
+    getCrewUpgradeCost,
+    getEngineerIntervalFrames,
+    getSupplierIntervalFrames,
+    getYachtHP,
+    getYachtSpeed,
+    getYachtHeatResist,
+    getYachtMagnetRange,
+    getYachtRadarRange,
+    generateName,
+    EVENT_TYPES,
+    CONFIG
+} from '../game/config';
 
-const createInitialGameState = () => ({
-    paused: true,
-    gameTime: 0,
-    dayPhase: 0,
+// ============================================================
+// INITIAL STATE FACTORIES
+// ============================================================
+
+const createInitialYachtState = () => ({
+    modules: {
+        hull: { id: 'hull', level: 0, tier: 0 },
+        engine: { id: 'engine', level: 0, tier: 0 },
+        cabin: { id: 'cabin', level: 0, tier: 0 },
+        magnet: { id: 'magnet', level: 0, tier: 0 },
+        radar: { id: 'radar', level: 0, tier: 0 }
+    },
+    crew: {
+        mechanic: { id: 'mechanic', hired: false, level: 0 },
+        navigator: { id: 'navigator', hired: false, level: 0 },
+        doctor: { id: 'doctor', hired: false, level: 0 },
+        merchant: { id: 'merchant', hired: false, level: 0 },
+        gunner: { id: 'gunner', hired: false, level: 0 },
+        quartermaster: { id: 'quartermaster', hired: false, level: 0 },
+        supplier: { id: 'supplier', hired: false, level: 0 },
+        engineer: { id: 'engineer', hired: false, level: 0 }
+    },
+    hp: 100,
+    maxHp: 100,
+    fuel: 100,
+    maxFuel: 100,
+    temperature: 36.6
+});
+
+const createInitialIslandState = () => ({
+    buildings: [],
+    residents: [],
+    animals: [],
+    populationCap: 5,
+    averageMood: 100,
+    averageHealth: 100,
+    weather: {
+        type: 'sunny',
+        duration: 3600,
+        effects: { waterBonus: 0, moodBonus: 5, canSail: true }
+    },
+    eventLog: []
+});
+
+const createInitialExpeditionState = () => ({
+    currentMission: null,
     distanceTraveled: 0,
     currentBiome: null,
-    mission: null,
-    crewTimers: { supplier: 0, engineer: 0 },
-    lastSyncTime: null
+    gameTime: 0,
+    dayPhase: 0,
+    crewTimers: { supplier: 0, engineer: 0 }
 });
+
+const createInitialPlayerState = () => ({
+    // Position in expedition mode
+    x: 0,
+    y: 0,
+    angle: -Math.PI / 2,
+    vel: { x: 0, y: 0 },
+
+    // Computed stats (from yacht + crew)
+    speedMult: 1,
+    armorLvl: 0,
+    heatResist: 0,
+    pickupRange: 1,
+    radarRange: 0,
+
+    // Status
+    isYacht: false,
+    isDead: false,
+    invulnerable: 0,
+    bodyTemp: 36.6,
+
+    // Active skills
+    skills: {
+        nitro: { active: false, cd: 0, max: 600, timer: 0 },
+        flare: { cd: 0, max: 1800 },
+        repair: { cd: 0, max: 3600 }
+    }
+});
+
+// ============================================================
+// LEGACY COMPATIBILITY - Inventory for merge mechanic
+// ============================================================
+const createInitialInventory = () => Array(10).fill(null);
+
+const createInitialEquip = () => ({
+    hull: null,
+    engine: null,
+    cabin: null,
+    magnet: null,
+    radar: null
+});
+
+// ============================================================
+// MAIN STORE
+// ============================================================
 
 const useGameStore = create(
     persist(
         immer((set, get) => ({
-            // Cloud Actions
-            saveToCloud: async () => {
-                const state = get();
-                // Strip unnecessary data if needed, or send full persistent state
-                const saveData = {
-                    player: state.player,
-                    inventory: state.inventory,
-                    equip: state.equip,
-                    gameState: state.gameState
-                };
+            // ============================================================
+            // STATE
+            // ============================================================
 
-                const success = await cloudService.saveGame(saveData);
-                if (success) {
-                    set((state) => {
-                        state.gameState.lastSyncTime = Date.now();
-                    });
-                }
-                return success;
+            // Game mode
+            mode: 'island', // 'expedition' | 'island'
+
+            // Resources
+            resources: { ...INITIAL_RESOURCES },
+            resourceLimits: { ...INITIAL_RESOURCE_LIMITS },
+
+            // Yacht (for expedition)
+            yacht: createInitialYachtState(),
+
+            // Island (for management)
+            island: createInitialIslandState(),
+
+            // Expedition state
+            expedition: createInitialExpeditionState(),
+
+            // Player state (position, computed stats)
+            player: createInitialPlayerState(),
+
+            // Legacy: Inventory for merge mechanic
+            inventory: createInitialInventory(),
+            equip: createInitialEquip(),
+
+            // Game state (legacy compatibility)
+            gameState: {
+                paused: true,
+                gameTime: 0,
+                dayPhase: 0,
+                distanceTraveled: 0,
+                currentBiome: null,
+                mission: null,
+                crewTimers: { supplier: 0, engineer: 0 },
+                lastSyncTime: null
             },
 
-            loadFromCloud: async () => {
-                const cloudState = await cloudService.loadGame();
-                if (cloudState) {
-                    // Safe merge or overwrite
-                    get().loadSave(cloudState);
-                    set((state) => {
-                        state.gameState.lastSyncTime = Date.now();
-                    });
-                    return true;
-                }
-                return false;
-            },
+            // ============================================================
+            // MODE SWITCHING
+            // ============================================================
 
-            // ... (keep existing actions)
-
-            // Player state
-            player: {
-                x: 0,
-                y: 0,
-                angle: -Math.PI / 2,
-                vel: { x: 0, y: 0 },
-                money: 0,
-                bodyTemp: 36.6,
-                armorLvl: 0,
-                heatResist: 0,
-                pickupRange: 1,
-                radarRange: 0,
-                speedMult: 1,
-                isYacht: false,
-                isDead: false,
-                invulnerable: 0,
-                crew: {
-                    mechanic: { hired: false, level: 0 },
-                    navigator: { hired: false, level: 0 },
-                    doctor: { hired: false, level: 0 },
-                    merchant: { hired: false, level: 0 },
-                    gunner: { hired: false, level: 0 },
-                    quartermaster: { hired: false, level: 0 },
-                    supplier: { hired: false, level: 0 },
-                    engineer: { hired: false, level: 0 }
-                },
-                skills: {
-                    nitro: { active: false, cd: 0, max: 600, timer: 0 },
-                    flare: { cd: 0, max: 1800 },
-                    repair: { cd: 0, max: 3600 }
-                }
-            },
-
-            // Inventory (5x2 grid = 10 slots)
-            inventory: Array(10).fill(null),
-
-            // Equipped items
-            equip: {
-                hull: null,
-                engine: null,
-                cabin: null,
-                magnet: null,
-                radar: null
-            },
-
-            // Game state
-            gameState: createInitialGameState(),
-
-            // Actions
-            updatePlayer: (updates) => set((state) => {
-                Object.assign(state.player, updates);
+            setMode: (mode) => set((state) => {
+                state.mode = mode;
             }),
 
+            // ============================================================
+            // RESOURCE MANAGEMENT
+            // ============================================================
+
+            addResource: (type, amount) => set((state) => {
+                const limit = state.resourceLimits[type];
+                if (limit) {
+                    state.resources[type] = Math.min(
+                        state.resources[type] + amount,
+                        limit
+                    );
+                } else {
+                    state.resources[type] += amount;
+                }
+            }),
+
+            spendResources: (cost) => {
+                const state = get();
+                // Check if can afford
+                for (const [resource, amount] of Object.entries(cost)) {
+                    if ((state.resources[resource] || 0) < amount) {
+                        return false;
+                    }
+                }
+                // Spend
+                set((s) => {
+                    for (const [resource, amount] of Object.entries(cost)) {
+                        s.resources[resource] -= amount;
+                    }
+                });
+                return true;
+            },
+
+            setResourceLimit: (type, limit) => set((state) => {
+                state.resourceLimits[type] = limit;
+            }),
+
+            // Legacy: addMoney uses resources.money
             addMoney: (amount) => set((state) => {
-                state.player.money += amount;
+                state.resources.money += amount;
+                // Also update legacy player.money for backwards compatibility
+                if (state.player.money !== undefined) {
+                    state.player.money = state.resources.money;
+                }
+            }),
+
+            // ============================================================
+            // ISLAND MANAGEMENT
+            // ============================================================
+
+            addResident: (profession) => set((state) => {
+                if (state.island.residents.length >= state.island.populationCap) {
+                    return; // At capacity
+                }
+
+                const resident = {
+                    id: nanoid(),
+                    name: generateName(),
+                    profession,
+                    skillLevel: 'novice',
+                    level: 1,
+                    health: 100,
+                    mood: 80,
+                    hunger: 100,
+                    assignedBuildingId: null,
+                    rescuedAt: Date.now()
+                };
+
+                state.island.residents.push(resident);
+            }),
+
+            assignWorker: (residentId, buildingId) => set((state) => {
+                const resident = state.island.residents.find(r => r.id === residentId);
+                if (resident) {
+                    resident.assignedBuildingId = buildingId;
+                }
+            }),
+
+            unassignWorker: (residentId) => set((state) => {
+                const resident = state.island.residents.find(r => r.id === residentId);
+                if (resident) {
+                    resident.assignedBuildingId = null;
+                }
+            }),
+
+            updateResident: (residentId, updates) => set((state) => {
+                const resident = state.island.residents.find(r => r.id === residentId);
+                if (resident) {
+                    Object.assign(resident, updates);
+                }
+            }),
+
+            addBuilding: (configId, position) => set((state) => {
+                const building = {
+                    id: nanoid(),
+                    configId,
+                    level: 1,
+                    position,
+                    workers: [],
+                    isActive: false,
+                    createdAt: Date.now()
+                };
+                state.island.buildings.push(building);
+            }),
+
+            upgradeBuilding: (buildingId) => set((state) => {
+                const building = state.island.buildings.find(b => b.id === buildingId);
+                if (building) {
+                    building.level += 1;
+                }
+            }),
+
+            updateWeather: (weatherType, duration) => set((state) => {
+                const weatherConfig = {
+                    sunny: { waterBonus: 0, moodBonus: 5, canSail: true },
+                    cloudy: { waterBonus: 0, moodBonus: 0, canSail: true },
+                    rain: { waterBonus: 50, moodPenalty: 10, canSail: true },
+                    storm: { waterBonus: 100, moodPenalty: 30, buildingRisk: 0.1, canSail: false }
+                };
+
+                state.island.weather = {
+                    type: weatherType,
+                    duration,
+                    effects: weatherConfig[weatherType] || weatherConfig.sunny
+                };
+            }),
+
+            increasePopulationCap: (amount) => set((state) => {
+                state.island.populationCap += amount;
+            }),
+
+            // ============================================================
+            // PRODUCTION LOOP - Called periodically to update island economy
+            // ============================================================
+
+            /**
+             * Main island tick - runs every in-game day cycle
+             * Call this from island mode update loop
+             */
+            tickIsland: () => set((state) => {
+                const { buildings, residents, weather } = state.island;
+                // Import INITIAL_RESOURCE_LIMITS inside if not available, but it is imported at top level.
+                // However, we need to access it. It is available in scope.
+
+                // Skip if no buildings
+                if (buildings.length === 0 && residents.length === 0) return;
+
+                // 1. Production from buildings
+                buildings.forEach(building => {
+                    const config = state._getBuildingConfig(building.configId);
+                    if (!config || !config.output) return;
+
+                    // Count assigned workers
+                    const workerCount = residents.filter(r => r.assignedBuildingId === building.id).length;
+                    const maxSlots = config.slots || 0;
+
+                    // No production without workers (unless slots === 0 which means auto)
+                    if (maxSlots > 0 && workerCount === 0) return;
+
+                    // Calculate efficiency (workers / slots)
+                    const efficiency = maxSlots > 0 ? Math.min(1, workerCount / maxSlots) : 1;
+
+                    // Base output scaled by level and efficiency
+                    const baseOutput = config.baseOutput || 0;
+                    const levelBonus = 1 + (building.level - 1) * 0.15; // +15% per level
+                    const weatherBonus = weather.effects?.waterBonus && config.output === 'water'
+                        ? 1 + weather.effects.waterBonus / 100
+                        : 1;
+
+                    const production = Math.floor(baseOutput * efficiency * levelBonus * weatherBonus);
+
+                    // Check consumption requirements
+                    let canProduce = true;
+                    if (config.consumption) {
+                        for (const [res, amount] of Object.entries(config.consumption)) {
+                            if ((state.resources[res] || 0) < amount * efficiency) {
+                                canProduce = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Add resources if can produce
+                    if (canProduce && production > 0) {
+                        // Deduct consumption
+                        if (config.consumption) {
+                            for (const [res, amount] of Object.entries(config.consumption)) {
+                                state.resources[res] = Math.max(0, (state.resources[res] || 0) - amount * efficiency);
+                            }
+                        }
+
+                        // Add production (respect limits)
+                        const limit = state.resourceLimits[config.output] || Infinity;
+                        state.resources[config.output] = Math.min(
+                            limit,
+                            (state.resources[config.output] || 0) + production
+                        );
+
+                        building.isActive = true;
+                    } else {
+                        building.isActive = false;
+                    }
+                });
+
+                // 2. Apply building effects (mood, health bonuses)
+                let totalMoodBonus = weather.effects?.moodBonus || 0;
+                let totalHealthBonus = 0;
+
+                buildings.forEach(building => {
+                    const config = state._getBuildingConfig(building.configId);
+                    if (!config?.effect) return;
+
+                    const levelMult = 1 + (building.level - 1) * 0.1;
+
+                    if (config.effect.type === 'mood') {
+                        totalMoodBonus += config.effect.value * levelMult;
+                    } else if (config.effect.type === 'health') {
+                        totalHealthBonus += config.effect.value * levelMult;
+                    }
+                });
+
+                // 3. Resident consumption and status update
+                const foodNeeded = residents.length;
+                const waterNeeded = residents.length;
+
+                const hasEnoughFood = (state.resources.food || 0) >= foodNeeded;
+                const hasEnoughWater = (state.resources.water || 0) >= waterNeeded;
+
+                // Consume food and water
+                if (hasEnoughFood) {
+                    state.resources.food -= foodNeeded;
+                }
+                if (hasEnoughWater) {
+                    state.resources.water -= waterNeeded;
+                }
+
+                // Update each resident
+                residents.forEach(resident => {
+                    // Mood changes
+                    const baseMood = 50 + totalMoodBonus;
+                    const workMoodBonus = resident.assignedBuildingId ? 10 : -5;
+                    const foodMoodPenalty = hasEnoughFood ? 0 : -20;
+                    const waterMoodPenalty = hasEnoughWater ? 0 : -25;
+
+                    const targetMood = Math.max(0, Math.min(100,
+                        baseMood + workMoodBonus + foodMoodPenalty + waterMoodPenalty
+                    ));
+
+                    // Slowly move toward target mood
+                    resident.mood = Math.round(resident.mood + (targetMood - resident.mood) * 0.2);
+
+                    // Health changes
+                    let healthDelta = totalHealthBonus / 10; // Buildings slowly heal
+                    if (!hasEnoughFood) healthDelta -= 5;
+                    if (!hasEnoughWater) healthDelta -= 10;
+                    if (resident.mood < 20) healthDelta -= 5; // Severely unhappy affects health
+
+                    resident.health = Math.max(0, Math.min(100, resident.health + healthDelta));
+
+                    // Hunger tracking
+                    resident.hunger = hasEnoughFood ? 100 : Math.max(0, resident.hunger - 20);
+                });
+
+                // Calculate averages
+                if (residents.length > 0) {
+                    state.island.averageMood = Math.round(
+                        residents.reduce((sum, r) => sum + r.mood, 0) / residents.length
+                    );
+                    state.island.averageHealth = Math.round(
+                        residents.reduce((sum, r) => sum + r.health, 0) / residents.length
+                    );
+                }
+
+                // 4. Housing effects & Storage Limits
+                let housingCap = 5;
+                const storageBonuses = { all: 0 };
+
+                buildings.forEach(building => {
+                    const config = state._getBuildingConfig(building.configId);
+                    if (!config) return;
+
+                    // Housing Cap
+                    if (config.populationBonus) {
+                        housingCap += config.populationBonus * building.level;
+                    }
+
+                    // Storage Capacity
+                    if (config.effect?.type === 'storage') {
+                        const amount = (config.effect.bonus || 0) * building.level;
+                        if (config.effect.resources.includes('all')) {
+                            storageBonuses.all += amount;
+                        } else {
+                            config.effect.resources.forEach(res => {
+                                storageBonuses[res] = (storageBonuses[res] || 0) + amount;
+                            });
+                        }
+                    }
+                });
+
+                state.island.populationCap = housingCap;
+
+                // Update resource limits based on warehouses
+                Object.keys(state.resourceLimits).forEach(res => {
+                    // Base limit is 50/100 defined in INITIAL_RESOURCE_LIMITS, but that's static.
+                    // We should recalculate based on base + storage.
+                    // Assuming INITIAL_RESOURCE_LIMITS are the 'base' values.
+                    const base = INITIAL_RESOURCE_LIMITS[res] || 50;
+                    const bonus = (storageBonuses.all || 0) + (storageBonuses[res] || 0);
+                    state.resourceLimits[res] = base + bonus;
+                });
+
+                // 5. Random Events System (Daily Chance)
+                // 1 tick = 1 day (assumed for now based on button, real-time likely different)
+                // Actually button call is manual 'Next Day'.
+
+                // 20% Change of event
+                if (Math.random() < 0.2) {
+                    // EVENT_TYPES imported at top
+                    const possibleEvents = Object.values(EVENT_TYPES).filter(evt => {
+                        if (evt.requires === 'weather_storm' && state.island.weather.type !== 'storm') return false;
+                        if (evt.requires && !buildings.some(b => b.configId === evt.requires)) return false;
+                        return true;
+                    });
+
+                    if (possibleEvents.length > 0) {
+                        const event = possibleEvents[Math.floor(Math.random() * possibleEvents.length)];
+
+                        // Apply effect
+                        event.effect(state);
+
+                        // Log event (we'll add a simple log array to state)
+                        if (!state.island.eventLog) state.island.eventLog = [];
+                        state.island.eventLog.unshift({
+                            id: nanoid(),
+                            type: event.type,
+                            message: event.description,
+                            timestamp: Date.now()
+                        });
+
+                        // Keep log short
+                        if (state.island.eventLog.length > 10) state.island.eventLog.pop();
+                    }
+                }
+            }),
+
+            // Helper to get building config (internal)
+            _getBuildingConfig: (configId) => {
+                return CONFIG.buildings?.[configId] || null;
+            },
+
+            // Calculate production summary for UI
+            getProductionSummary: () => {
+                const state = get();
+                const { buildings, residents } = state.island;
+                const production = {};
+                const consumption = {};
+
+                buildings.forEach(building => {
+                    const config = state._getBuildingConfig(building.configId);
+                    if (!config) return;
+
+                    const workerCount = residents.filter(r => r.assignedBuildingId === building.id).length;
+                    const maxSlots = config.slots || 0;
+                    const efficiency = maxSlots > 0 ? Math.min(1, workerCount / maxSlots) : 1;
+                    const levelBonus = 1 + (building.level - 1) * 0.15;
+
+                    if (config.output && config.baseOutput) {
+                        const output = Math.floor(config.baseOutput * efficiency * levelBonus);
+                        production[config.output] = (production[config.output] || 0) + output;
+                    }
+
+                    if (config.consumption) {
+                        for (const [res, amount] of Object.entries(config.consumption)) {
+                            consumption[res] = (consumption[res] || 0) + Math.floor(amount * efficiency);
+                        }
+                    }
+                });
+
+                // Resident consumption
+                consumption.food = (consumption.food || 0) + residents.length;
+                consumption.water = (consumption.water || 0) + residents.length;
+
+                return { production, consumption };
+            },
+
+            // ============================================================
+            // YACHT MANAGEMENT (New 50-level system)
+            // ============================================================
+
+            upgradeYachtModule: (moduleId) => set((state) => {
+                const module = state.yacht.modules[moduleId];
+                if (module && module.level < 50) {
+                    module.level += 1;
+                    module.tier = Math.floor(module.level / 10);
+
+                    // Update computed stats
+                    if (moduleId === 'hull') {
+                        state.yacht.maxHp = getYachtHP(module.level);
+                        state.yacht.hp = state.yacht.maxHp;
+                    }
+                }
+            }),
+
+            setYachtHp: (hp) => set((state) => {
+                state.yacht.hp = Math.max(0, Math.min(hp, state.yacht.maxHp));
+            }),
+
+            repairYacht: (amount) => set((state) => {
+                state.yacht.hp = Math.min(state.yacht.hp + amount, state.yacht.maxHp);
+            }),
+
+            // ============================================================
+            // LEGACY: PLAYER & INVENTORY ACTIONS (Backwards compatibility)
+            // ============================================================
+
+            updatePlayer: (updates) => set((state) => {
+                Object.assign(state.player, updates);
             }),
 
             activateSkill: (skillId) => set((state) => {
@@ -117,19 +592,16 @@ const useGameStore = create(
 
                 switch (skillId) {
                     case 'nitro':
-                        // Speed boost for 3 seconds (180 frames)
                         skill.active = true;
                         skill.timer = 180;
                         skill.cd = skill.max;
                         break;
                     case 'flare':
-                        // Scare away enemies (handled in Game.js)
                         skill.cd = skill.max;
-                        // Set a flag for Game.js to detect
                         state.player.flareActive = true;
                         break;
                     case 'repair':
-                        // Restore temperature to max
+                        state.yacht.temperature = 36.6;
                         state.player.bodyTemp = 36.6;
                         skill.cd = skill.max;
                         break;
@@ -139,19 +611,17 @@ const useGameStore = create(
             buyItem: (type) => {
                 let result = 'error';
                 set((state) => {
-                    const { player, inventory } = state;
-                    let cost = 10; // BASE
+                    let cost = 10;
 
-                    // Merchant discount - rebalanced for 10 levels
-                    if (player.crew?.merchant?.hired) {
-                        const discount = (player.crew.merchant.level || 0) * 0.025;
+                    if (state.yacht.crew.merchant?.hired) {
+                        const discount = (state.yacht.crew.merchant.level || 0) * 0.025;
                         cost = Math.floor(cost * (1 - discount));
                     }
 
-                    if (player.money >= cost) {
-                        const emptyIdx = inventory.findIndex(item => item === null);
+                    if (state.resources.money >= cost) {
+                        const emptyIdx = state.inventory.findIndex(item => item === null);
                         if (emptyIdx !== -1) {
-                            state.player.money -= cost;
+                            state.resources.money -= cost;
                             state.inventory[emptyIdx] = {
                                 type,
                                 tier: 0,
@@ -181,8 +651,7 @@ const useGameStore = create(
                 if (item1 && item2 &&
                     item1.type === item2.type &&
                     item1.tier === item2.tier &&
-                    item1.tier < 20) {
-                    // Merge: upgrade tier
+                    item1.tier < 50) {  // Extended to 50 tiers
                     state.inventory[idx1].tier += 1;
                     state.inventory[idx2] = null;
                 }
@@ -191,10 +660,13 @@ const useGameStore = create(
             equipItem: (slotType, itemIdx) => set((state) => {
                 const item = state.inventory[itemIdx];
                 if (item && item.type === slotType) {
-                    // Swap
                     const prevEquipped = state.equip[slotType];
                     state.equip[slotType] = item;
                     state.inventory[itemIdx] = prevEquipped;
+
+                    // Sync with new yacht modules
+                    state.yacht.modules[slotType].level = item.tier;
+                    state.yacht.modules[slotType].tier = Math.floor(item.tier / 10);
                 }
             }),
 
@@ -205,6 +677,10 @@ const useGameStore = create(
                     if (emptyIdx !== -1) {
                         state.inventory[emptyIdx] = item;
                         state.equip[slotType] = null;
+
+                        // Reset yacht module
+                        state.yacht.modules[slotType].level = 0;
+                        state.yacht.modules[slotType].tier = 0;
                     }
                 }
             }),
@@ -214,8 +690,10 @@ const useGameStore = create(
                 if (item) {
                     if (item.tier > 0) {
                         item.tier--;
+                        state.yacht.modules[slotType].level = item.tier;
                     } else {
                         state.equip[slotType] = null;
+                        state.yacht.modules[slotType].level = 0;
                     }
                 }
             }),
@@ -223,99 +701,74 @@ const useGameStore = create(
             hireCrew: (type) => {
                 let result = 'error';
                 set((state) => {
-                    let cost = getCrewUpgradeCost(1);
+                    const crewMember = state.yacht.crew[type];
 
-                    let crewMember = state.player.crew[type];
-
-                    // Auto-fix for missing crew members (migration/reset issue)
                     if (!crewMember) {
                         console.warn(`Crew member ${type} missing, initializing...`);
-                        crewMember = { hired: false, level: 0 };
-                        state.player.crew[type] = crewMember;
+                        state.yacht.crew[type] = { id: type, hired: false, level: 0 };
+                        return;
                     }
 
-                    if (!crewMember.hired) {
-                        // Initial hire
-                        if (state.player.money >= cost) {
-                            state.player.money -= cost;
-                            crewMember.hired = true;
-                            crewMember.level = 1;
+                    const nextLevel = crewMember.hired ? crewMember.level + 1 : 1;
+                    const cost = getCrewUpgradeCost(nextLevel);
 
-                            // Quartermaster adds inventory slot
-                            if (type === 'quartermaster') {
-                                state.inventory.push(null);
-                            }
-                            result = 'success';
-                        } else {
-                            result = 'no_money';
+                    if (state.resources.money >= cost) {
+                        state.resources.money -= cost;
+                        crewMember.hired = true;
+                        crewMember.level = nextLevel;
+
+                        if (type === 'quartermaster') {
+                            state.inventory.push(null);
                         }
+                        result = 'success';
                     } else {
-                        const nextLevel = crewMember.level + 1;
-                        cost = getCrewUpgradeCost(nextLevel);
-
-                        if (state.player.money >= cost) {
-                            state.player.money -= cost;
-                            crewMember.level = nextLevel;
-
-                            // Quartermaster adds inventory slot on level up
-                            if (type === 'quartermaster') {
-                                state.inventory.push(null);
-                            }
-                            result = 'success';
-                        } else {
-                            result = 'no_money';
-                        }
+                        result = 'no_money';
                     }
                 });
                 return result;
             },
 
             updateCrewAbilities: () => set((state) => {
-                const { player, inventory, gameState, equip } = state;
+                const { yacht, inventory, expedition, equip, resources } = state;
 
-                // --- Supplier Logic (Auto-buy) ---
-                if (player.crew.supplier.hired) {
-                    gameState.crewTimers.supplier -= 1;
-                    if (gameState.crewTimers.supplier <= 0) {
-                        const level = player.crew.supplier.level;
+                // Supplier Logic
+                if (yacht.crew.supplier.hired) {
+                    expedition.crewTimers.supplier -= 1;
+                    if (expedition.crewTimers.supplier <= 0) {
+                        const level = yacht.crew.supplier.level;
                         const interval = getSupplierIntervalFrames(level);
 
                         const cost = 10;
-                        if (player.money >= cost) {
+                        if (resources.money >= cost) {
                             const emptyIdx = inventory.findIndex(i => i === null);
-
-                            // Filter valid types based on equipped status
                             const allTypes = ['hull', 'engine', 'cabin', 'magnet', 'radar'];
-                            const validTypes = allTypes.filter(t => !equip[t] || equip[t].tier < 20);
+                            const validTypes = allTypes.filter(t => !equip[t] || equip[t].tier < 50);
 
                             if (emptyIdx !== -1 && validTypes.length > 0) {
-                                player.money -= cost;
+                                resources.money -= cost;
                                 const type = validTypes[Math.floor(Math.random() * validTypes.length)];
                                 inventory[emptyIdx] = {
                                     type,
                                     tier: 0,
                                     id: nanoid()
                                 };
-                                gameState.crewTimers.supplier = interval;
+                                expedition.crewTimers.supplier = interval;
                             } else {
-                                // Inventory full or all items maxed, retry in 5s
-                                gameState.crewTimers.supplier = 300;
+                                expedition.crewTimers.supplier = 300;
                             }
                         } else {
-                            // No money, retry in 3s
-                            gameState.crewTimers.supplier = 180;
+                            expedition.crewTimers.supplier = 180;
                         }
                     }
                 }
 
-                // --- Engineer Logic (Auto-merge) ---
-                if (player.crew.engineer.hired) {
-                    gameState.crewTimers.engineer -= 1;
-                    if (gameState.crewTimers.engineer <= 0) {
-                        const level = player.crew.engineer.level;
+                // Engineer Logic
+                if (yacht.crew.engineer.hired) {
+                    expedition.crewTimers.engineer -= 1;
+                    if (expedition.crewTimers.engineer <= 0) {
+                        const level = yacht.crew.engineer.level;
                         const interval = getEngineerIntervalFrames(level);
 
-                        // Auto merge logic (one merge per trigger)
                         let merged = false;
                         for (let i = 0; i < inventory.length; i++) {
                             if (!inventory[i]) continue;
@@ -323,7 +776,7 @@ const useGameStore = create(
                                 if (!inventory[j]) continue;
                                 if (inventory[i].type === inventory[j].type &&
                                     inventory[i].tier === inventory[j].tier &&
-                                    inventory[i].tier < 20) {
+                                    inventory[i].tier < 50) {
                                     inventory[i].tier += 1;
                                     inventory[j] = null;
                                     merged = true;
@@ -333,13 +786,13 @@ const useGameStore = create(
                             if (merged) break;
                         }
 
-                        gameState.crewTimers.engineer = interval;
+                        expedition.crewTimers.engineer = interval;
                     }
                 }
             }),
 
             recalcStats: () => set((state) => {
-                const { player, equip } = state;
+                const { player, equip, yacht } = state;
 
                 // Reset stats
                 player.isYacht = false;
@@ -353,17 +806,24 @@ const useGameStore = create(
                 const equipped = Object.values(equip).filter(e => e !== null);
                 player.isYacht = equipped.length === 5;
 
-                // Apply bonuses - rebalanced for 20 tiers
-                // Engine: Tier 1 = +10% speed, Tier 20 = +200% speed
-                if (equip.engine) player.speedMult += (equip.engine.tier || 0) * 0.1;
-                // Hull: Tier = Armor level (1:1 ratio)
-                if (equip.hull) player.armorLvl = (equip.hull.tier || 0);
-                // Cabin: Tier = Heat resist level +1
-                if (equip.cabin) player.heatResist = (equip.cabin.tier || 0) + 1;
-                // Magnet: Tier 1 = +25%, Tier 20 = +500%
-                if (equip.magnet) player.pickupRange += (equip.magnet.tier || 0) * 0.25;
-                // Radar: Tier 1 = 1.25x, Tier 20 = 6x
-                if (equip.radar) player.radarRange = 1 + ((equip.radar.tier || 0) * 0.25);
+                // Apply bonuses from equipped items (using new formulas)
+                if (equip.engine) {
+                    const level = equip.engine.tier || 0;
+                    player.speedMult = getYachtSpeed(level);
+                }
+                if (equip.hull) {
+                    player.armorLvl = equip.hull.tier || 0;
+                    yacht.maxHp = getYachtHP(equip.hull.tier || 1);
+                }
+                if (equip.cabin) {
+                    player.heatResist = getYachtHeatResist(equip.cabin.tier || 0);
+                }
+                if (equip.magnet) {
+                    player.pickupRange = getYachtMagnetRange(equip.magnet.tier || 1);
+                }
+                if (equip.radar) {
+                    player.radarRange = getYachtRadarRange(equip.radar.tier || 1);
+                }
             }),
 
             autoMerge: () => {
@@ -380,11 +840,11 @@ const useGameStore = create(
 
                             if (inventory[i].type === inventory[j].type &&
                                 inventory[i].tier === inventory[j].tier &&
-                                inventory[i].tier < 20) {
+                                inventory[i].tier < 50) {
                                 inventory[i].tier += 1;
                                 inventory[j] = null;
                                 merged = true;
-                                break; // Continue outer loop
+                                break;
                             }
                         }
                     }
@@ -394,122 +854,106 @@ const useGameStore = create(
             },
 
             resetPlayer: () => set((state) => {
-                state.player = {
-                    x: 0,
-                    y: 0,
-                    angle: -Math.PI / 2,
-                    vel: { x: 0, y: 0 },
-                    money: 0,
-                    bodyTemp: 36.6,
-                    armorLvl: 0,
-                    heatResist: 0,
-                    pickupRange: 1,
-                    radarRange: 0,
-                    speedMult: 1,
-                    isYacht: false,
-                    isDead: false,
-                    invulnerable: 0,
-                    crew: {
-                        mechanic: { hired: false, level: 0 },
-                        navigator: { hired: false, level: 0 },
-                        doctor: { hired: false, level: 0 },
-                        merchant: { hired: false, level: 0 },
-                        gunner: { hired: false, level: 0 },
-                        quartermaster: { hired: false, level: 0 },
-                        supplier: { hired: false, level: 0 },
-                        engineer: { hired: false, level: 0 }
-                    },
-                    skills: {
-                        nitro: { active: false, cd: 0, max: 600, timer: 0 },
-                        flare: { cd: 0, max: 1800 },
-                        repair: { cd: 0, max: 3600 }
-                    }
-                };
-                state.inventory = Array(10).fill(null);
-                state.equip = {
-                    hull: null,
-                    engine: null,
-                    cabin: null,
-                    magnet: null,
-                    radar: null
-                };
+                state.player = createInitialPlayerState();
+                state.inventory = createInitialInventory();
+                state.equip = createInitialEquip();
+                state.yacht = createInitialYachtState();
+                state.resources = { ...INITIAL_RESOURCES };
             }),
 
             updateGameState: (updates) => set((state) => {
                 Object.assign(state.gameState, updates);
+                // Sync with expedition state
+                if (updates.distanceTraveled !== undefined) {
+                    state.expedition.distanceTraveled = updates.distanceTraveled;
+                }
+                if (updates.gameTime !== undefined) {
+                    state.expedition.gameTime = updates.gameTime;
+                }
             }),
 
+            // ============================================================
+            // CLOUD SYNC
+            // ============================================================
+
+            saveToCloud: async () => {
+                const state = get();
+                const saveData = {
+                    mode: state.mode,
+                    resources: state.resources,
+                    yacht: state.yacht,
+                    island: state.island,
+                    expedition: state.expedition,
+                    player: state.player,
+                    inventory: state.inventory,
+                    equip: state.equip,
+                    gameState: state.gameState
+                };
+
+                const success = await cloudService.saveGame(saveData);
+                if (success) {
+                    set((s) => {
+                        s.gameState.lastSyncTime = Date.now();
+                    });
+                }
+                return success;
+            },
+
+            loadFromCloud: async () => {
+                const cloudState = await cloudService.loadGame();
+                if (cloudState) {
+                    get().loadSave(cloudState);
+                    set((state) => {
+                        state.gameState.lastSyncTime = Date.now();
+                    });
+                    return true;
+                }
+                return false;
+            },
+
             loadSave: (saveData) => set((state) => {
-                if (saveData.player) {
-                    Object.assign(state.player, saveData.player);
-                }
-                if (saveData.inventory) {
-                    state.inventory = saveData.inventory;
-                }
-                if (saveData.equip) {
-                    Object.assign(state.equip, saveData.equip);
-                }
-                if (saveData.gameState) {
-                    Object.assign(state.gameState, saveData.gameState);
-                }
+                if (saveData.mode) state.mode = saveData.mode;
+                if (saveData.resources) Object.assign(state.resources, saveData.resources);
+                if (saveData.yacht) Object.assign(state.yacht, saveData.yacht);
+                if (saveData.island) Object.assign(state.island, saveData.island);
+                if (saveData.expedition) Object.assign(state.expedition, saveData.expedition);
+                if (saveData.player) Object.assign(state.player, saveData.player);
+                if (saveData.inventory) state.inventory = saveData.inventory;
+                if (saveData.equip) Object.assign(state.equip, saveData.equip);
+                if (saveData.gameState) Object.assign(state.gameState, saveData.gameState);
             })
         })),
         {
-            name: 'yacht-game-storage',
+            name: 'island-haven-storage',
             partialize: (state) => ({
+                // EXCLUDE mode to always start on island
+                // mode: state.mode, 
+                resources: state.resources,
+                resourceLimits: state.resourceLimits,
+                yacht: state.yacht,
+                island: state.island,
+                expedition: state.expedition,
                 player: state.player,
                 inventory: state.inventory,
                 equip: state.equip,
                 gameState: state.gameState
             }),
             merge: (persistedState, currentState) => {
-                // Deep merge saved state with current state
                 if (!persistedState) return currentState;
 
                 console.log('Merging persisted state:', persistedState);
 
-                // Migrate old saves
-                const migratedPlayer = { ...currentState.player, ...persistedState.player };
-
-                // Ensure crew has all members (add missing ones)
-                if (migratedPlayer.crew) {
-                    // Start with default crew to ensure all keys exist
-                    const defaultCrew = currentState.player.crew;
-                    migratedPlayer.crew = {
-                        ...defaultCrew,
-                        ...migratedPlayer.crew,
-                    };
-
-                    // Deep merge specifically for objects if needed, but simple replacement is usually fine for crew structs
-                    // actually we need to make sure we don't have partial objects if that ever happened
-                    // Let's just ensure specific critical ones if they were missing in old saves
-                    ['quartermaster', 'supplier', 'engineer', 'merchant', 'doctor', 'navigator', 'mechanic', 'gunner'].forEach(role => {
-                        if (!migratedPlayer.crew[role]) {
-                            migratedPlayer.crew[role] = { ...defaultCrew[role] };
-                        }
-                    });
-                }
-
-                // Fix inventory size based on quartermaster level
-                let migratedInventory = persistedState.inventory || currentState.inventory;
-                const quartermasterLevel = migratedPlayer.crew?.quartermaster?.level || 0;
-                const expectedInventorySize = 10 + quartermasterLevel;
-
-                if (migratedInventory.length !== expectedInventorySize) {
-                    console.log(`Migrating inventory from ${migratedInventory.length} to ${expectedInventorySize} slots`);
-                    const newInventory = Array(expectedInventorySize).fill(null);
-                    migratedInventory.forEach((item, index) => {
-                        if (index < expectedInventorySize) {
-                            newInventory[index] = item;
-                        }
-                    });
-                    migratedInventory = newInventory;
-                }
-
+                // Merge with defaults
                 return {
                     ...currentState,
-                    player: migratedPlayer,
-                    inventory: migratedInventory,
+                    mode: currentState.mode, // Always use default mode (island) on reload
+                    resources: { ...currentState.resources, ...persistedState.resources },
+                    resourceLimits: { ...currentState.resourceLimits, ...persistedState.resourceLimits },
+                    yacht: persistedState.yacht ? { ...currentState.yacht, ...persistedState.yacht } : currentState.yacht,
+                    island: persistedState.island ? { ...currentState.island, ...persistedState.island } : currentState.island,
+                    expedition: persistedState.expedition ? { ...currentState.expedition, ...persistedState.expedition } : currentState.expedition,
+                    player: { ...currentState.player, ...persistedState.player },
+                    inventory: persistedState.inventory || currentState.inventory,
                     equip: { ...currentState.equip, ...persistedState.equip },
                     gameState: { ...currentState.gameState, ...persistedState.gameState }
                 };

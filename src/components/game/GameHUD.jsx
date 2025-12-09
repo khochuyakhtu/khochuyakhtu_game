@@ -1,81 +1,188 @@
 import { motion } from 'framer-motion';
 import useGameStore from '../../stores/useGameStore';
 import useUIStore from '../../stores/useUIStore';
+import ResourceBar from '../ui/ResourceBar';
+import StatusIndicators from '../ui/StatusIndicators';
+import { RESOURCES } from '../../game/config';
 
 export default function GameHUD() {
-    const { player } = useGameStore();
+    const { player, resources, yacht, mode } = useGameStore();
     const toggleGarage = useUIStore((state) => state.toggleGarage);
 
-    // Armor percentage scaled to 20 tiers
+    // Armor percentage scaled to 50 tiers now
     const hpPercent = player.isYacht && player.armorLvl > 0
-        ? Math.max(0, (player.armorLvl / 20) * 100)
+        ? Math.max(0, (player.armorLvl / 50) * 100)
         : 0;
 
     const tempPercent = Math.max(0, Math.min(100, ((player.bodyTemp - 28) / (36.6 - 28)) * 100));
     const tempColor = tempPercent > 50 ? 'bg-orange-500' : 'bg-red-500';
 
+    // Yacht HP bar (new)
+    const yachtHpPercent = yacht.maxHp > 0 ? (yacht.hp / yacht.maxHp) * 100 : 0;
+
     return (
         <>
-            {/* Compact Top Bar - Money & Stats */}
+            {/* Top Bar - Resources (Island Mode) or Expedition Stats */}
             <motion.div
-                className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden z-10"
+                className="absolute top-3 left-3 z-10 flex flex-col gap-2"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                {/* Money */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50">
-                    <span className="text-lg">💵</span>
-                    <span className="font-mono text-sm text-green-400 font-bold">
-                        {player.money}
-                    </span>
-                </div>
+                {/* Main Resource Bar */}
+                <ResourceBar />
 
-                {/* Stats */}
-                <div className="px-3 py-2 space-y-1.5">
-                    {/* Armor */}
-                    <div>
-                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                            <span className="text-[9px] text-slate-400">🛡️</span>
-                            <span className="text-[9px] text-white font-bold">Lvl {player.armorLvl}</span>
-                        </div>
-                        <div className="w-24 bg-slate-800 h-1 rounded-full overflow-hidden">
-                            <div
-                                className="bg-green-500 h-full transition-all duration-300"
-                                style={{ width: `${hpPercent}%` }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Temperature */}
-                    <div>
-                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                            <span className="text-[9px] text-slate-400">🌡️</span>
-                            <span className="text-[9px] text-white font-bold">
-                                {player.bodyTemp.toFixed(1)}°
+                {/* Expedition-specific stats */}
+                {mode === 'expedition' && (
+                    <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">
+                        {/* Money (legacy display) */}
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50">
+                            <span className="text-lg">💵</span>
+                            <span className="font-mono text-sm text-green-400 font-bold">
+                                {formatNumber(resources.money)}
                             </span>
                         </div>
-                        <div className="w-24 bg-slate-800 h-1 rounded-full overflow-hidden">
-                            <div
-                                className={`${tempColor} h-full transition-all duration-300`}
-                                style={{ width: `${tempPercent}%` }}
-                            />
+
+                        {/* Stats */}
+                        <div className="px-3 py-2 space-y-1.5">
+                            {/* Yacht HP */}
+                            {player.isYacht && yacht.maxHp > 0 && (
+                                <div>
+                                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                                        <span className="text-[9px] text-slate-400">❤️ HP</span>
+                                        <span className="text-[9px] text-white font-bold">
+                                            {yacht.hp}/{yacht.maxHp}
+                                        </span>
+                                    </div>
+                                    <div className="w-24 bg-slate-800 h-1 rounded-full overflow-hidden">
+                                        <div
+                                            className="bg-red-500 h-full transition-all duration-300"
+                                            style={{ width: `${yachtHpPercent}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Armor Level */}
+                            <div>
+                                <div className="flex items-center justify-between gap-2 mb-0.5">
+                                    <span className="text-[9px] text-slate-400">🛡️</span>
+                                    <span className="text-[9px] text-white font-bold">Lvl {player.armorLvl}</span>
+                                </div>
+                                <div className="w-24 bg-slate-800 h-1 rounded-full overflow-hidden">
+                                    <div
+                                        className="bg-green-500 h-full transition-all duration-300"
+                                        style={{ width: `${hpPercent}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Temperature */}
+                            <div>
+                                <div className="flex items-center justify-between gap-2 mb-0.5">
+                                    <span className="text-[9px] text-slate-400">🌡️</span>
+                                    <span className="text-[9px] text-white font-bold">
+                                        {player.bodyTemp.toFixed(1)}°
+                                    </span>
+                                </div>
+                                <div className="w-24 bg-slate-800 h-1 rounded-full overflow-hidden">
+                                    <div
+                                        className={`${tempColor} h-full transition-all duration-300`}
+                                        style={{ width: `${tempPercent}%` }}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
             </motion.div>
 
-            {/* Workshop Button - Top Right */}
-            <motion.button
-                onClick={() => toggleGarage(true)}
-                className="absolute top-3 right-3 bg-indigo-600 text-white p-2 rounded-lg border-2 border-indigo-800 z-10 hover:bg-indigo-500 active:scale-95 transition-all shadow-lg"
+            {/* Top Right - Status Indicators (Island mode) or Workshop button */}
+            <motion.div
+                className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end"
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
             >
-                <span className="text-xl">🛠️</span>
-            </motion.button>
+                {/* Status Indicators (for island mode) */}
+                {mode === 'island' && <StatusIndicators />}
+
+                {/* Workshop Button */}
+                <motion.button
+                    onClick={() => toggleGarage(true)}
+                    className="bg-indigo-600 text-white p-2 rounded-lg border-2 border-indigo-800 hover:bg-indigo-500 active:scale-95 transition-all shadow-lg"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    <span className="text-xl">🛠️</span>
+                </motion.button>
+
+                {/* Mode Switch Button */}
+                <motion.button
+                    onClick={() => {
+                        const gameStore = useGameStore.getState();
+                        const uiStore = useUIStore.getState();
+
+                        if (mode === 'expedition') {
+                            // Switch to island mode and navigate
+                            gameStore.setMode('island');
+                            uiStore.setScreen('island');
+                        } else {
+                            // Switch to expedition mode
+                            gameStore.setMode('expedition');
+                            uiStore.setScreen('game');
+                        }
+                    }}
+                    className="bg-cyan-600 text-white px-3 py-1.5 rounded-lg border-2 border-cyan-800 hover:bg-cyan-500 active:scale-95 transition-all shadow-lg text-sm font-bold"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    {mode === 'expedition' ? '🏝️ Острів' : '⛵ Море'}
+                </motion.button>
+            </motion.div>
+
+            {/* Bottom Resource Quick View (Expedition mode) */}
+            {mode === 'expedition' && (
+                <motion.div
+                    className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10 flex gap-2"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                >
+                    {/* Quick resource indicators for collected items */}
+                    <ResourceQuickView type="wood" value={resources.wood} />
+                    <ResourceQuickView type="metal" value={resources.metal} />
+                    <ResourceQuickView type="plastic" value={resources.plastic} />
+                    <ResourceQuickView type="food" value={resources.food} />
+                </motion.div>
+            )}
         </>
     );
+}
+
+/**
+ * Quick view resource pill for expedition mode
+ */
+function ResourceQuickView({ type, value }) {
+    const config = RESOURCES[type];
+    if (!config || value === 0) return null;
+
+    return (
+        <div className="bg-slate-800/80 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1 border border-slate-700/50">
+            <span className="text-sm">{config.icon}</span>
+            <span className="text-xs text-white font-bold">{formatNumber(value)}</span>
+        </div>
+    );
+}
+
+/**
+ * Format large numbers
+ */
+function formatNumber(num) {
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+    }
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'k';
+    }
+    return Math.floor(num).toString();
 }

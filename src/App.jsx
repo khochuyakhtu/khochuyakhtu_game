@@ -8,6 +8,7 @@ import LeaderboardScreen from './components/screens/LeaderboardScreen';
 import TasksScreen from './components/screens/TasksScreen';
 import SavesScreen from './components/screens/SavesScreen';
 import GameScreen from './components/screens/GameScreen';
+import IslandScreen from './components/screens/IslandScreen';
 
 import NotificationSystem from './components/ui/NotificationSystem';
 
@@ -34,9 +35,12 @@ function App() {
         }
     }, []);
 
-    // Simulate loading
+    // Load Game Config
     useEffect(() => {
-        const timer = setTimeout(() => {
+        const init = async () => {
+            // Load configuration from DB
+            await import('./game/config').then(m => m.initGameConfig());
+
             // Check if we need to auto-start game (after loading save)
             const startGame = localStorage.getItem('yacht-start-game');
             if (startGame === 'true') {
@@ -45,9 +49,9 @@ function App() {
             } else {
                 setScreen('menu');
             }
-        }, 1500);
+        };
 
-        return () => clearTimeout(timer);
+        init();
     }, [setScreen]);
 
     return (
@@ -136,6 +140,19 @@ function App() {
                         transition={{ duration: 0.3 }}
                     >
                         <SavesScreen />
+                    </motion.div>
+                )}
+
+                {currentScreen === 'island' && (
+                    <motion.div
+                        key="island"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="w-full h-full"
+                    >
+                        <IslandScreen />
                     </motion.div>
                 )}
             </AnimatePresence>

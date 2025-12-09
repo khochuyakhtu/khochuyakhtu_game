@@ -1,5 +1,7 @@
 // EntityManager - Handles spawning and updating all game entities
-import { CONFIG } from '../config';
+// Island Haven: Rescue & Build
+import { CONFIG, generateName } from '../config';
+import { nanoid } from 'nanoid';
 
 export class EntityManager {
     spawn(game) {
@@ -14,6 +16,16 @@ export class EntityManager {
                 val: CONFIG.moneyValue
             });
         }
+
+        // ============================================================
+        // FLOATING RESOURCES (NEW)
+        // ============================================================
+        this.spawnFloatingResources(game, spawnY);
+
+        // ============================================================
+        // SURVIVORS TO RESCUE (NEW)
+        // ============================================================
+        this.spawnSurvivors(game, spawnY);
 
         // Coffee (Temperature boost) - optimized limit
         if (entities.coffee.length < 2 && Math.random() < 0.02) {
@@ -31,15 +43,16 @@ export class EntityManager {
             });
         }
 
-        // Mines - levels 0-20 based on biome
+        // Mines - levels 0-50 based on biome (extended from 20)
         if (entities.mines.length < 3 + Math.floor(currentBiome.danger / 2) && Math.random() < 0.015) {
             // Level distribution based on danger:
-            // Tropics (1): 0-6
-            // Atlantica (3): 4-12
-            // North Sea (5): 10-16
-            // Arctic (8): 14-20
-            const minLvl = Math.floor(Math.max(0, (currentBiome.danger - 1) * 2));
-            const maxLvl = Math.floor(Math.min(20, minLvl + 6));
+            // Tropics (1): 0-10
+            // Mangrove (2): 5-15
+            // Graveyard (4): 15-25
+            // Arctic (8): 30-40
+            // Abyss (10): 40-50
+            const minLvl = Math.floor(Math.max(0, (currentBiome.danger - 1) * 5));
+            const maxLvl = Math.floor(Math.min(50, minLvl + 10));
 
             const lvl = Math.floor(minLvl + Math.random() * (maxLvl - minLvl + 1));
 
@@ -47,7 +60,7 @@ export class EntityManager {
                 x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.2,
                 y: spawnY + Math.random() * 500,
                 lvl,
-                r: 15 + (lvl * 1.5), // Slightly reduced growth to keep size reasonable
+                r: 15 + (lvl * 0.8), // Slightly smaller growth for 50 levels
                 pulse: 0
             });
         }
@@ -72,8 +85,9 @@ export class EntityManager {
             });
         }
 
-        // Icebergs (Arctic only)
-        if (currentBiome.name === 'Арктика' && entities.icebergs.length < 5 && Math.random() < 0.02) {
+        // Icebergs (Arctic biomes)
+        const isArctic = currentBiome.id === 'map_arctic' || currentBiome.name === 'Арктика';
+        if (isArctic && entities.icebergs.length < 5 && Math.random() < 0.02) {
             entities.icebergs.push({
                 x: player.x + (Math.random() - 0.5) * window.innerWidth * 2,
                 y: spawnY - 500,
@@ -122,6 +136,100 @@ export class EntityManager {
         this.cleanup(entities.pirates, player);
         this.cleanup(entities.pirateBullets, player);
         this.cleanup(entities.oilSlicks, player);
+
+        // Cleanup new entity types
+        if (entities.floatingResources) this.cleanup(entities.floatingResources, player);
+        if (entities.survivors) this.cleanup(entities.survivors, player);
+    }
+
+    /**
+     * Spawn floating resources (wood, metal, plastic, food)
+     */
+    spawnFloatingResources(game, spawnY) {
+        const { player, entities, currentBiome } = game;
+
+        // Initialize array if needed
+        if (!entities.floatingResources) {
+            entities.floatingResources = [];
+        }
+
+        const maxResources = 5 + Math.floor(currentBiome.danger / 2);
+
+        CONFIG.floatingResources.forEach(resourceConfig => {
+            const spawnChance = resourceConfig.spawnRate * (1 + currentBiome.danger * 0.1);
+
+            if (entities.floatingResources.length < maxResources && Math.random() < spawnChance) {
+                const [minAmount, maxAmount] = resourceConfig.baseAmount;
+                const amount = Math.floor(minAmount + Math.random() * (maxAmount - minAmount + 1));
+
+                entities.floatingResources.push({
+                    id: nanoid(),
+                    x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
+                    y: spawnY + Math.random() * 500,
+                    type: resourceConfig.type,
+                    sprite: resourceConfig.sprite,
+                    amount,
+                    bobOffset: Math.random() * Math.PI * 2, // For floating animation
+                    rotation: Math.random() * Math.PI * 2
+                });
+            }
+        });
+    }
+
+    /**
+     * Spawn survivors to rescue
+     */
+    spawnSurvivors(game, spawnY) {
+        const { player, entities, currentBiome, gameStore } = game;
+
+        // Initialize array if needed
+        if (!entities.survivors) {
+            entities.survivors = [];
+        }
+
+        // Check population cap
+        const island = gameStore?.getState()?.island;
+        const populationCap = island?.populationCap || 20;
+        const currentPop = island?.residents?.length || 0;
+
+        // Don't spawn if at capacity
+        if (currentPop >= populationCap) return;
+
+        const maxSurvivors = 2;
+        const spawnChance = 0.005 * (1 + currentBiome.danger * 0.2);
+
+        if (entities.survivors.length < maxSurvivors && Math.random() < spawnChance) {
+            // Weighted random selection
+            const totalWeight = CONFIG.rescueTypes.reduce((sum, t) => sum + t.weight, 0);
+            let random = Math.random() * totalWeight;
+            let selectedType = CONFIG.rescueTypes[0];
+
+            for (const rescueType of CONFIG.rescueTypes) {
+                random -= rescueType.weight;
+                if (random <= 0) {
+                    selectedType = rescueType;
+                    break;
+                }
+            }
+
+            const survivor = {
+                id: nanoid(),
+                x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
+                y: spawnY + Math.random() * 500,
+                type: selectedType.type,
+                profession: selectedType.profession,
+                isAnimal: selectedType.isAnimal || false,
+                effect: selectedType.effect || null,
+                platform: selectedType.platform || 'buoy',
+                name: selectedType.isAnimal
+                    ? (selectedType.type === 'cat' ? '🐱 Мурчик' : '🐕 Бобік')
+                    : generateName(),
+                waveTimer: Math.random() * Math.PI * 2, // For waving animation
+                bobOffset: Math.random() * Math.PI * 2
+            };
+
+            entities.survivors.push(survivor);
+        }
     }
 
     spawnKraken(game) {
@@ -148,6 +256,34 @@ export class EntityManager {
             p.x += p.vx;
             p.y += p.vy;
             if (p.life <= 0) entities.particles.splice(i, 1);
+        }
+
+        // ============================================================
+        // FLOATING RESOURCES ANIMATION
+        // ============================================================
+        if (entities.floatingResources) {
+            entities.floatingResources.forEach(res => {
+                // Bob up and down
+                res.bobOffset += 0.05;
+                res.visualY = res.y + Math.sin(res.bobOffset) * 5;
+
+                // Slow rotation
+                res.rotation += 0.01;
+            });
+        }
+
+        // ============================================================
+        // SURVIVORS ANIMATION
+        // ============================================================
+        if (entities.survivors) {
+            entities.survivors.forEach(survivor => {
+                // Bob up and down
+                survivor.bobOffset += 0.04;
+                survivor.visualY = survivor.y + Math.sin(survivor.bobOffset) * 8;
+
+                // Wave for help periodically
+                survivor.waveTimer += 0.1;
+            });
         }
 
         // Sharks AI
@@ -293,4 +429,49 @@ export class EntityManager {
             });
         }
     }
+
+    /**
+     * Add resource collection particles
+     */
+    addResourceParticles(x, y, type, entities) {
+        const colors = {
+            wood: '#8B4513',
+            metal: '#71797E',
+            plastic: '#00CED1',
+            food: '#DAA520'
+        };
+        const color = colors[type] || '#facc15';
+
+        for (let i = 0; i < 8; i++) {
+            entities.particles.push({
+                x,
+                y,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4 - 2,
+                life: 30,
+                r: Math.random() * 4 + 2,
+                color
+            });
+        }
+    }
+
+    /**
+     * Add rescue celebration particles
+     */
+    addRescueParticles(x, y, entities) {
+        const colors = ['#4ade80', '#60a5fa', '#facc15', '#f472b6'];
+
+        for (let i = 0; i < 20; i++) {
+            entities.particles.push({
+                x,
+                y,
+                vx: (Math.random() - 0.5) * 6,
+                vy: (Math.random() - 0.5) * 6 - 3,
+                life: 50,
+                r: Math.random() * 5 + 3,
+                color: colors[Math.floor(Math.random() * colors.length)]
+            });
+        }
+    }
 }
+

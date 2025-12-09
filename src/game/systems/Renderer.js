@@ -285,6 +285,129 @@ export class Renderer {
             this.ctx.fillText("🔧", kit.x, kit.y);
         });
 
+        // ============================================================
+        // FLOATING RESOURCES (NEW)
+        // ============================================================
+        entities.floatingResources?.forEach(res => {
+            if (!isVisible(res)) return;
+
+            const visualY = res.visualY || res.y;
+            const d = Math.hypot(res.x - player.x, res.y - player.y);
+
+            // Attraction line when in range
+            if (d < magnetR) {
+                this.ctx.save();
+                this.ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                this.ctx.moveTo(player.x, player.y);
+                this.ctx.lineTo(res.x, res.y);
+                this.ctx.stroke();
+                this.ctx.restore();
+            }
+
+            // Draw floating platform
+            this.ctx.save();
+            this.ctx.translate(res.x, visualY);
+            this.ctx.rotate(res.rotation || 0);
+
+            // Crate/debris background
+            this.ctx.fillStyle = 'rgba(139, 69, 19, 0.7)';
+            this.ctx.fillRect(-15, -10, 30, 20);
+            this.ctx.strokeStyle = 'rgba(101, 67, 33, 0.8)';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(-15, -10, 30, 20);
+
+            this.ctx.restore();
+
+            // Resource emoji on top
+            this.ctx.font = "24px Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            this.ctx.fillText(res.sprite, res.x, visualY);
+
+            // Amount indicator
+            if (res.amount > 1) {
+                this.ctx.font = "bold 10px Arial";
+                this.ctx.fillStyle = '#facc15';
+                this.ctx.fillText(`x${res.amount}`, res.x + 15, visualY - 10);
+            }
+        });
+
+        // ============================================================
+        // SURVIVORS TO RESCUE (NEW)
+        // ============================================================
+        entities.survivors?.forEach(survivor => {
+            if (!isVisible(survivor)) return;
+
+            const visualY = survivor.visualY || survivor.y;
+            const waving = Math.sin(survivor.waveTimer || 0) > 0.5;
+
+            // Draw platform based on type
+            this.ctx.save();
+            this.ctx.translate(survivor.x, visualY);
+
+            // Platform
+            const platformColors = {
+                buoy: '#ef4444',
+                raft: '#8B4513',
+                wreckage: '#475569',
+                lifeboat: '#f97316',
+                luxury_debris: '#a855f7'
+            };
+            const platformColor = platformColors[survivor.platform] || '#94a3b8';
+
+            if (survivor.platform === 'buoy') {
+                // Buoy
+                this.ctx.fillStyle = platformColor;
+                this.ctx.beginPath();
+                this.ctx.arc(0, 10, 15, 0, Math.PI * 2);
+                this.ctx.fill();
+            } else {
+                // Raft/wreckage
+                this.ctx.fillStyle = platformColor;
+                this.ctx.fillRect(-25, 5, 50, 15);
+            }
+            this.ctx.restore();
+
+            // Draw person or animal
+            this.ctx.font = survivor.isAnimal ? "28px Arial" : "24px Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+
+            if (survivor.isAnimal) {
+                // Animal emoji
+                const emoji = survivor.type === 'cat' ? '🐱' : '🐕';
+                this.ctx.fillText(emoji, survivor.x, visualY - 15);
+            } else {
+                // Person emoji with profession hint
+                const profEmojis = {
+                    worker: '👷',
+                    fisher: '🎣',
+                    scientist: '👨‍🔬',
+                    pilot: '👨‍✈️',
+                    engineer: '👨‍🔧',
+                    doctor: '👨‍⚕️',
+                    vip: '👑',
+                    strongman: '💪'
+                };
+                const emoji = profEmojis[survivor.profession] || '🙋';
+                this.ctx.fillText(emoji, survivor.x, visualY - 15);
+
+                // Waving hand animation
+                if (waving) {
+                    this.ctx.font = "16px Arial";
+                    this.ctx.fillText('👋', survivor.x + 20, visualY - 25);
+                }
+            }
+
+            // Help text
+            this.ctx.font = "bold 10px Arial";
+            this.ctx.fillStyle = '#facc15';
+            this.ctx.fillText("ДОПОМОГА!", survivor.x, visualY - 40);
+        });
+
         // Player
         this.ctx.save();
         this.ctx.translate(player.x, player.y);

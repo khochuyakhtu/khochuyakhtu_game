@@ -86,7 +86,7 @@ export default function SavesScreen() {
                 {/* Інформація */}
                 <div className="mt-8 p-4 bg-slate-800/30 rounded-xl border border-slate-700 text-center">
                     <p className="text-slate-400 text-sm">
-                        💡 Щоб зберегти гру, натисніть <b>"☁️ Save Cloud"</b> у меню Гаража під час гри.
+                        💡 Щоб зберегти гру, скористайтеся кнопками на екрані <b>"🏝️ Острів"</b>.
                     </p>
                 </div>
             </div>

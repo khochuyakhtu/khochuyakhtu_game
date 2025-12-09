@@ -8,7 +8,7 @@ export default function MainMenu() {
         {
             id: 'start',
             label: '▶️ Почати гру',
-            screen: 'game',
+            screen: 'island',
             color: 'from-indigo-600 to-purple-600',
             shadow: 'shadow-indigo-500/40'
         },
