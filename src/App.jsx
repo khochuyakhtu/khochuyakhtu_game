@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useUIStore from './stores/useUIStore';
 import LoadingScreen from './components/screens/LoadingScreen';
