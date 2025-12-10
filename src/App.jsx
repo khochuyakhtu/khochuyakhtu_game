@@ -9,6 +9,7 @@ import TasksScreen from './components/screens/TasksScreen';
 import SavesScreen from './components/screens/SavesScreen';
 import GameScreen from './components/screens/GameScreen';
 import IslandScreen from './components/screens/IslandScreen';
+import { initGameConfig } from './game/config';
 
 import NotificationSystem from './components/ui/NotificationSystem';
 
@@ -39,7 +40,7 @@ function App() {
     useEffect(() => {
         const init = async () => {
             // Load configuration from DB
-            await import('./game/config').then(m => m.initGameConfig());
+            await initGameConfig();
 
             // Check if we need to auto-start game (after loading save)
             const startGame = localStorage.getItem('yacht-start-game');

@@ -36,6 +36,7 @@ export default function IslandScreen() {
 
     return (
         <div className="h-screen w-screen overflow-hidden flex flex-col bg-gradient-to-b from-cyan-900 via-teal-800 to-emerald-900">
+            <MissionsModal />
             {/* Header */}
             <motion.div
                 className="shrink-0 z-20 bg-gradient-to-b from-cyan-900/95 to-cyan-900/80 backdrop-blur-md p-4 border-b border-cyan-700/30"

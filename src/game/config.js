@@ -1,3 +1,4 @@
+import { cloudService } from '../services/CloudService';
 // Game Configuration and Constants
 // Island Haven: Rescue & Build
 
@@ -227,7 +228,6 @@ export const EVENT_TYPES = {
 export const initGameConfig = async () => {
     try {
         console.log('Initializing Game Config...');
-        const { cloudService } = await import('../services/CloudService');
         const data = await cloudService.loadConfig();
 
         if (!data) throw new Error('Failed to load config from CloudService');
