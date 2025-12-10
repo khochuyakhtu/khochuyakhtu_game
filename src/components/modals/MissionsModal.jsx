@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useUIStore from '../../stores/useUIStore';
 import useGameStore from '../../stores/useGameStore';
 import { CONFIG } from '../../game/config';
+import styles from './MissionsModal.module.css';
 
 export default function MissionsModal() {
     const isOpen = useUIStore((state) => state.missionsModalOpen);
@@ -83,9 +84,9 @@ export default function MissionsModal() {
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className={styles.backdrop}>
                     <motion.div
-                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        className={styles.scrim}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -93,26 +94,24 @@ export default function MissionsModal() {
                     />
 
                     <motion.div
-                        className="relative w-full max-w-4xl bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+                        className={styles.modal}
                         initial={{ scale: 0.9, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: 20 }}
                     >
-                        {/* Header */}
-                        <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-                            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <div className={styles.header}>
+                            <h2 className={styles.title}>
                                 <span>🗺️</span> Вибір Місії
                             </h2>
                             <button
                                 onClick={handleClose}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 transition-colors"
+                                className={styles.close}
                             >
                                 ✕
                             </button>
                         </div>
 
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+                        <div className={styles.content}>
                             {mapOrder.map((mapId, idx) => {
                                 const group = missionsByBiome[mapId];
                                 if (!group || group.missions.length === 0) return null;
@@ -123,66 +122,56 @@ export default function MissionsModal() {
                                 const progressText = `${Math.min(progress, total)} / ${total}`;
 
                                 return (
-                                    <div key={mapId} className="space-y-3 relative">
+                                    <div key={mapId} className={styles.biomeBlock}>
                                         {!mapUnlocked && (
-                                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] rounded-xl border border-slate-800 z-10 flex items-center justify-center text-slate-300 text-sm">
+                                            <div className={styles.lockOverlay}>
                                                 Пройдіть усі місії на попередній карті, щоб розблокувати
                                             </div>
                                         )}
 
                                         <h3
-                                            className="text-lg font-bold sticky top-0 bg-slate-900/95 py-2 px-1 border-b border-slate-800 z-10 flex items-center gap-2"
+                                            className={styles.biomeTitle}
                                             style={{ color: group.color || '#fff' }}
                                         >
                                             {group.name}
-                                            <span className="text-xs text-slate-400">({progressText})</span>
+                                            <span className={styles.progress}>({progressText})</span>
                                         </h3>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        <div className={styles.missionGrid}>
                                             {group.missions.map(mission => {
                                                 const { unlocked, completed } = missionState(mission, mapUnlocked);
                                                 return (
                                                     <motion.button
                                                         key={mission.id}
                                                         onClick={() => unlocked && handleStartMission(mission)}
-                                                        className={`flex flex-col gap-2 p-3 rounded-xl transition-all text-left group relative overflow-hidden border ${
-                                                            unlocked
-                                                                ? 'bg-slate-800 hover:bg-slate-700 active:scale-95 border-slate-700 hover:border-cyan-500/50'
-                                                                : 'bg-slate-800/40 border-slate-800 cursor-not-allowed'
-                                                        }`}
+                                                        className={`${styles.missionCard} ${unlocked ? styles.missionCardActive : styles.missionCardLocked}`}
                                                         whileHover={unlocked ? { y: -2 } : undefined}
                                                     >
                                                         {completed && (
-                                                            <span className="absolute top-2 right-2 text-emerald-400 text-xs font-semibold">
-                                                                ✔
-                                                            </span>
+                                                            <span className={styles.completed}>✔</span>
                                                         )}
                                                         {!unlocked && !completed && (
-                                                            <span className="absolute top-2 right-2 text-amber-400 text-xs font-semibold">
-                                                                🔒
-                                                            </span>
+                                                            <span className={styles.locked}>🔒</span>
                                                         )}
 
-                                                        <div className="flex justify-between items-start">
-                                                            <span className="font-bold text-slate-200">
+                                                        <div className={styles.missionHeader}>
+                                                            <span className={styles.missionTitle}>
                                                                 Місія {mission.missionNumber}
                                                             </span>
                                                             {mission.difficulty > 5 && (
-                                                                <span className="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">
-                                                                    Hard
-                                                                </span>
+                                                                <span className={styles.difficulty}>Hard</span>
                                                             )}
                                                         </div>
 
-                                                        <div className="text-xs text-slate-400">
+                                                        <div className={styles.rewardLine}>
                                                             Нагорода:
-                                                            <span className="text-emerald-400 font-mono ml-1">
+                                                            <span className={styles.rewardMoney}>
                                                                 {mission.reward?.money || 0}💰
                                                             </span>
                                                             {Object.entries(mission.reward || {})
                                                                 .filter(([k]) => k !== 'money' && k !== 'event')
                                                                 .map(([k, v]) => (
-                                                                    <span key={k} className="ml-2 text-slate-300">
+                                                                    <span key={k} className={styles.rewardExtra}>
                                                                         +{v} {k === 'wood' ? '🪵' : k}
                                                                     </span>
                                                                 ))
@@ -190,7 +179,7 @@ export default function MissionsModal() {
                                                         </div>
 
                                                         {mission.requirements && Object.keys(mission.requirements).length > 0 && (
-                                                            <div className="text-[10px] text-amber-500/80 mt-1">
+                                                            <div className={styles.requirements}>
                                                                 🔒 Вимоги: {Object.keys(mission.requirements).join(', ')}
                                                             </div>
                                                         )}
@@ -203,7 +192,7 @@ export default function MissionsModal() {
                             })}
 
                             {Object.keys(missionsByBiome).length === 0 && (
-                                <div className="text-center text-slate-500 py-10">
+                                <div className={styles.empty}>
                                     Місії не знайдено. Перевірте з'єднання з сервером.
                                 </div>
                             )}

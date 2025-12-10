@@ -2,6 +2,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'framer-motion';
 import { CONFIG } from '../../game/config';
+import styles from './Item.module.css';
 
 export default function Item({ item, index }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -17,7 +18,7 @@ export default function Item({ item, index }) {
     if (!item) return null;
 
     const partConfig = CONFIG.partTypes[item.type];
-    const tierClass = `tier-${item.tier}`;
+    const tierClass = styles[`tier${item.tier}`] || '';
 
     return (
         <motion.div
@@ -25,13 +26,13 @@ export default function Item({ item, index }) {
             style={style}
             {...listeners}
             {...attributes}
-            className={`item-slot ${tierClass} cursor-grab active:cursor-grabbing`}
+            className={`${styles.slot} ${styles.draggable} ${tierClass}`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
         >
-            <span className="select-none">{partConfig.icon}</span>
+            <span className={styles.icon}>{partConfig.icon}</span>
             {item.tier > 0 && (
-                <span className="absolute top-0 right-0 text-[8px] font-bold bg-black/50 px-1 rounded">
+                <span className={styles.tierBadge}>
                     {item.tier}/20
                 </span>
             )}

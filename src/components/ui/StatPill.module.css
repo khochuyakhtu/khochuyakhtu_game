@@ -1,0 +1,53 @@
+.pill {
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(6px);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 6px 10px;
+  min-width: 90px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  overflow: visible;
+}
+
+.icon {
+  font-size: 14px;
+}
+
+.value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.success .value {
+  color: #34d399;
+}
+
+.warning .value {
+  color: #facc15;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 10px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+}
+
+.pill:hover .tooltip {
+  opacity: 1;
+}

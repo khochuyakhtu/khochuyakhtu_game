@@ -1,0 +1,32 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 80px;
+}
+
+.icon {
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.track {
+  flex: 1;
+  height: 6px;
+  background: #1f2937;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.warm {
+  background: #f97316;
+}
+
+.cold {
+  background: #ef4444;
+}

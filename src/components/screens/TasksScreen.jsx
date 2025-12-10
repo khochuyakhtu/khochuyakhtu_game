@@ -4,6 +4,7 @@ import useUIStore from '../../stores/useUIStore';
 import useGameStore from '../../stores/useGameStore';
 import useNotificationStore from '../../stores/useNotificationStore';
 import { Haptics } from '../../game/config';
+import styles from './TasksScreen.module.css';
 
 const CHANNELS = [
     {
@@ -127,53 +128,52 @@ export default function TasksScreen() {
     };
 
     return (
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-y-auto">
-            <div className="max-w-2xl mx-auto p-5 pb-20">
-                {/* Header */}
-                <div className="flex items-center mb-8">
+        <div className={styles.screen}>
+            <div className={styles.container}>
+                <div className={styles.header}>
                     <button
                         onClick={() => setScreen('menu')}
-                        className="bg-slate-800/50 text-white px-4 py-2 rounded-lg mr-4 hover:bg-slate-700"
+                        className={styles.back}
                     >
                         ←
                     </button>
-                    <h2 className="text-3xl font-bold text-white">Завдання</h2>
+                    <h2 className={styles.heading}>Завдання</h2>
                 </div>
 
-                <div className="space-y-4">
+                <div className={styles.list}>
                     {CHANNELS.map((channel, index) => {
                         const state = channelStates[channel.id] || { subscribed: false, rewarded: false, checking: false };
 
                         return (
                             <motion.div
                                 key={channel.id}
-                                className="bg-slate-800/80 border border-slate-700 rounded-xl p-6"
+                                className={styles.card}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1 }}
                             >
-                                <div className="flex items-start gap-4">
-                                    <div className="text-4xl">{channel.icon}</div>
-                                    <div className="flex-1">
-                                        <h3 className="text-xl font-bold text-white mb-2">
+                                <div className={styles.cardHeader}>
+                                    <div className={styles.cardIcon}>{channel.icon}</div>
+                                    <div className={styles.cardBody}>
+                                        <h3 className={styles.cardTitle}>
                                             Підпишись на {channel.name}
                                         </h3>
-                                        <p className="text-sm text-slate-400 mb-4">
+                                        <p className={styles.cardText}>
                                             Підпішіться на канал та отримайте {channel.reward}$ бонусом!
                                             {index === 0 && ' Також ви будете отримувати +100$ при кожному старті гри!'}
                                         </p>
 
-                                        <div className="flex gap-3 flex-wrap">
+                                        <div className={styles.actions}>
                                             <button
                                                 onClick={() => handleSubscribe(channel)}
-                                                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-5 py-2 rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className={`${styles.button} ${styles.subButton} ${state.rewarded ? styles.disabled : ''}`}
                                                 disabled={state.rewarded}
                                             >
                                                 📱 Підписатись
                                             </button>
                                             <button
                                                 onClick={() => checkSubscription(channel)}
-                                                className="bg-green-600 hover:bg-green-500 text-white font-bold px-5 py-2 rounded-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className={`${styles.button} ${styles.verifyButton} ${(state.rewarded || state.checking) ? styles.disabled : ''}`}
                                                 disabled={state.rewarded || state.checking}
                                             >
                                                 {state.checking ? '⏳ Перевірка...' : '✓ Перевірити'}
@@ -181,7 +181,7 @@ export default function TasksScreen() {
                                         </div>
 
                                         {state.rewarded && (
-                                            <div className="mt-4 text-sm text-green-400">
+                                            <div className={styles.rewarded}>
                                                 ✓ Винагорода отримана! +{channel.reward}$
                                             </div>
                                         )}
@@ -192,18 +192,17 @@ export default function TasksScreen() {
                     })}
                 </div>
 
-                {/* Bonus Info */}
                 <motion.div
-                    className="mt-6 bg-blue-900/30 border border-blue-700/50 rounded-xl p-4"
+                    className={styles.bonus}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
                 >
-                    <div className="flex items-start gap-3">
-                        <div className="text-2xl">💰</div>
+                    <div className={styles.bonusInner}>
+                        <div className={styles.bonusIcon}>💰</div>
                         <div>
-                            <h4 className="text-white font-bold mb-1">Бонус при старті гри</h4>
-                            <p className="text-sm text-blue-200">
+                            <h4 className={styles.bonusTitle}>Бонус при старті гри</h4>
+                            <p className={styles.bonusText}>
                                 За кожне виконане завдання ви отримуєте +100$ при початку кожної нової гри!
                             </p>
                         </div>

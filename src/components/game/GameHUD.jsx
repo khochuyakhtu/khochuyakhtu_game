@@ -8,6 +8,7 @@ import ModeSwitchButton from './hud/ModeSwitchButton';
 import WorkshopButton from './hud/WorkshopButton';
 import CollapseToggle from './hud/CollapseToggle';
 import { formatNumber } from '../../utils/formatNumber';
+import styles from './GameHUD.module.css';
 
 export default function GameHUD() {
     const { player, resources, yacht, mode, gameState } = useGameStore();
@@ -18,11 +19,11 @@ export default function GameHUD() {
     return (
         <>
             <motion.div
-                className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-start gap-2"
+                className={styles.topBar}
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                <div className="flex items-center gap-2">
+                <div className={styles.topBarLeft}>
                     {!topCollapsed && <ResourceBar />}
                     <CollapseToggle collapsed={topCollapsed} onToggle={() => setTopCollapsed((v) => !v)} />
                 </div>
@@ -38,7 +39,7 @@ export default function GameHUD() {
             </motion.div>
 
             <motion.div
-                className="absolute top-3 right-3 z-30 flex flex-col gap-2 items-end"
+                className={styles.rightColumn}
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2 }}

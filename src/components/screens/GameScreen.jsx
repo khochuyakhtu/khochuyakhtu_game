@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import GameCanvas from '../game/GameCanvas';
 import GameHUD from '../game/GameHUD';
 import SkillButtons from '../game/SkillButtons';
@@ -7,6 +6,7 @@ import GarageModal from '../modals/GarageModal';
 import GameOverModal from '../modals/GameOverModal';
 import MissionResultModal from '../modals/MissionResultModal';
 import useUIStore from '../../stores/useUIStore';
+import styles from './GameScreen.module.css';
 
 export default function GameScreen() {
     const garageOpen = useUIStore((state) => state.garageOpen);
@@ -14,29 +14,15 @@ export default function GameScreen() {
     const missionResultOpen = useUIStore((state) => state.missionResultModalOpen);
 
     return (
-        <div className="relative w-full h-full overflow-hidden bg-black">
-            {/* Game Canvas (Game logic will be rendered here) */}
+        <div className={styles.screen}>
             <GameCanvas />
-
-            {/* HUD Overlay */}
             <GameHUD />
-
-            {/* Mission Panel */}
             <MissionPanel />
-
-            {/* Skill Buttons */}
             <SkillButtons />
 
-            {/* Damage Overlay */}
-            <div
-                id="damage-overlay"
-                className="absolute inset-0 pointer-events-none"
-            />
+            <div id="damage-overlay" className={styles.overlay} />
+            <div id="cold-vignette" className={styles.overlay} />
 
-            {/* Cold Vignette */}
-            <div id="cold-vignette" />
-
-            {/* Modals */}
             {garageOpen && <GarageModal />}
             {gameOverOpen && <GameOverModal />}
             {missionResultOpen && <MissionResultModal />}

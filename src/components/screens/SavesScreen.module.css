@@ -1,0 +1,141 @@
+.screen {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #0f172a, #0b1440, #0f172a);
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.back {
+  background: rgba(30, 41, 59, 0.5);
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  margin-right: 16px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.back:hover {
+  background: rgba(51, 65, 85, 0.7);
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px dashed #334155;
+  border-radius: 14px;
+  padding: 32px;
+}
+
+.cloudIcon {
+  font-size: 64px;
+  color: #38bdf8;
+  margin-bottom: 16px;
+}
+
+.panelTitle {
+  font-size: 26px;
+  color: #ffffff;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.panelText {
+  font-size: 16px;
+  color: #cbd5e1;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #0284c7;
+  color: #ffffff;
+  padding: 16px 24px;
+  border-radius: 14px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+  box-shadow: 0 12px 30px rgba(2, 132, 199, 0.35);
+}
+
+.primary:hover:not(.disabled) {
+  background: #0ea5e9;
+}
+
+.primary:active:not(.disabled) {
+  transform: scale(0.97);
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.lastSync {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 10px 16px;
+  border-radius: 9999px;
+  border: 1px solid #334155;
+}
+
+.lastSyncValue {
+  color: #ffffff;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  margin-left: 8px;
+}
+
+.info {
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.infoText {
+  color: #94a3b8;
+  font-size: 14px;
+}

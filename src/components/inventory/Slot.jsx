@@ -1,5 +1,6 @@
 import { useDroppable } from '@dnd-kit/core';
 import Item from './Item';
+import styles from './Slot.module.css';
 
 export default function Slot({ index, item }) {
     const { setNodeRef, isOver } = useDroppable({
@@ -10,7 +11,7 @@ export default function Slot({ index, item }) {
     return (
         <div
             ref={setNodeRef}
-            className={`item-slot ${isOver ? 'ring-2 ring-yellow-400 bg-yellow-400/10' : ''}`}
+            className={`${styles.slot} ${isOver ? styles.dropActive : ''}`}
         >
             {item && <Item item={item} index={index} />}
         </div>

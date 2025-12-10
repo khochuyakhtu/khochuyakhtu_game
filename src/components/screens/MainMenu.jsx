@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import useUIStore from '../../stores/useUIStore';
 import useGameStore from '../../stores/useGameStore';
+import styles from './MainMenu.module.css';
 
 export default function MainMenu() {
     const setScreen = useUIStore((state) => state.setScreen);
@@ -45,11 +46,10 @@ export default function MainMenu() {
     ];
 
     return (
-        <div className="fixed inset-0 flex flex-col items-center justify-center p-5">
-            <div className="text-center max-w-md w-full">
-                {/* Logo */}
+        <div className={styles.screen}>
+            <div className={styles.card}>
                 <motion.div
-                    className="text-7xl mb-6"
+                    className={styles.emoji}
                     animate={{
                         y: [0, -10, 0],
                     }}
@@ -63,7 +63,7 @@ export default function MainMenu() {
                 </motion.div>
 
                 <motion.h1
-                    className="text-5xl font-bold text-cyan-400 mb-3 text-shadow"
+                    className={styles.title}
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                 >
@@ -71,7 +71,7 @@ export default function MainMenu() {
                 </motion.h1>
 
                 <motion.p
-                    className="text-lg text-slate-400 mb-12"
+                    className={styles.subtitle}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
@@ -79,27 +79,30 @@ export default function MainMenu() {
                     Ultimate Survival
                 </motion.p>
 
-                {/* Menu Buttons */}
-                <div className="space-y-4">
-                    {menuItems.map((item, index) => (
-                        <motion.button
-                            key={item.id}
-                            className={`w-full bg-gradient-to-br ${item.color} text-white text-lg font-bold py-4 px-6 rounded-xl border border-slate-700 shadow-lg ${item.shadow} transition-all duration-200 active:scale-95`}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            onClick={() => {
-                                if (item.id === 'start') {
-                                    startNewGame();
-                                }
-                                setScreen(item.screen);
-                            }}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            {item.label}
-                        </motion.button>
-                    ))}
+                <div className={styles.menu}>
+                    {menuItems.map((item, index) => {
+                        const toneClass = styles[item.id] || styles.defaultButton;
+                        const shadowClass = styles[`${item.id}Shadow`] || '';
+                        return (
+                            <motion.button
+                                key={item.id}
+                                className={`${styles.button} ${toneClass} ${shadowClass}`}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                onClick={() => {
+                                    if (item.id === 'start') {
+                                        startNewGame();
+                                    }
+                                    setScreen(item.screen);
+                                }}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                {item.label}
+                            </motion.button>
+                        );
+                    })}
                 </div>
             </div>
         </div>

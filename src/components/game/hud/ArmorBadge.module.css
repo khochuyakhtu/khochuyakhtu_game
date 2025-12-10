@@ -1,0 +1,16 @@
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon {
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.value {
+  font-size: 11px;
+  color: #ffffff;
+  font-weight: 700;
+}

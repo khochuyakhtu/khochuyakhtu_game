@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import useGameStore from '../../stores/useGameStore';
 import { Haptics } from '../../game/config';
+import styles from './SaveSlotsModal.module.css';
 
 const SAVE_SLOTS_KEY = 'yacht-game-saves';
 
@@ -117,66 +118,63 @@ export default function SaveSlotsModal({ onClose, mode = 'save' }) { // mode: 's
 
     return (
         <motion.div
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+            className={styles.backdrop}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
         >
             <motion.div
-                className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full mx-4"
+                className={styles.modal}
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
-                <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
-                    <h2 className="text-xl font-bold text-white">
+                <div className={styles.header}>
+                    <h2 className={styles.title}>
                         {mode === 'save' ? 'Збереження' : 'Завантаження'}
                     </h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">×</button>
+                    <button onClick={onClose} className={styles.close}>×</button>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex p-1 bg-slate-800 rounded-lg mb-4">
+                <div className={styles.tabs}>
                     <button
                         onClick={() => setActiveTab('local')}
-                        className={`flex-1 py-1 text-sm font-bold rounded ${activeTab === 'local' ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                        className={`${styles.tab} ${activeTab === 'local' ? styles.tabActive : ''}`}
                     >
                         Локально
                     </button>
                     <button
                         onClick={() => setActiveTab('cloud')}
-                        className={`flex-1 py-1 text-sm font-bold rounded ${activeTab === 'cloud' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                        className={`${styles.tab} ${activeTab === 'cloud' ? styles.tabCloud : ''}`}
                     >
                         Сервер
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="space-y-2 min-h-[200px]">
+                <div className={styles.content}>
                     {activeTab === 'local' ? (
                         <>
                             {slots.map((slot, index) => (
-                                <div key={index} className={`p-3 rounded-lg border ${slot ? 'bg-slate-800 border-slate-600' : 'bg-slate-800/50 border-slate-700 border-dashed'}`}>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex-1">
-                                            <div className="font-bold text-white text-sm">Слот {index + 1}</div>
+                                <div key={index} className={`${styles.slotCard} ${slot ? styles.slotFilled : styles.slotEmpty}`}>
+                                    <div className={styles.slotRow}>
+                                        <div className={styles.slotInfo}>
+                                            <div className={styles.slotTitle}>Слот {index + 1}</div>
                                             {slot ? (
-                                                <div className="text-[10px] text-slate-400 mt-1">
+                                                <div className={styles.slotMeta}>
                                                     <div>💰 ${slot.player?.money || 0}</div>
                                                     <div>📅 {formatDate(slot.savedAt)}</div>
                                                 </div>
                                             ) : (
-                                                <div className="text-[10px] text-slate-500 mt-1">Порожньо</div>
+                                                <div className={styles.slotEmptyText}>Порожньо</div>
                                             )}
                                         </div>
-                                        <div className="flex gap-2">
+                                        <div className={styles.slotActions}>
                                             {mode === 'save' && (
                                                 <button
                                                     onClick={() => handleLocalSave(index)}
-                                                    className="bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-1.5 rounded font-bold"
+                                                    className={styles.saveButton}
                                                 >
                                                     {slot ? 'Замінити' : 'Зберегти'}
                                                 </button>
@@ -184,22 +182,22 @@ export default function SaveSlotsModal({ onClose, mode = 'save' }) { // mode: 's
                                             {mode === 'load' && slot && (
                                                 <button
                                                     onClick={() => handleLocalLoad(index)}
-                                                    className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded font-bold"
+                                                    className={styles.loadButton}
                                                 >
                                                     Завантажити
                                                 </button>
                                             )}
-                                            {slot && <button onClick={() => handleLocalDelete(index)} className="bg-red-600/50 hover:bg-red-600 text-white text-xs px-2 py-1.5 rounded">🗑️</button>}
+                                            {slot && <button onClick={() => handleLocalDelete(index)} className={styles.deleteButton}>🗑️</button>}
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </>
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-full py-8 text-center bg-slate-800/20 rounded-xl border border-dashed border-slate-700">
-                            <div className="text-4xl mb-3">☁️</div>
-                            <h3 className="text-white font-bold mb-2">Хмарне сховище</h3>
-                            <p className="text-sm text-slate-400 mb-6 max-w-[200px]">
+                        <div className={styles.cloudPanel}>
+                            <div className={styles.cloudIcon}>☁️</div>
+                            <h3 className={styles.cloudTitle}>Хмарне сховище</h3>
+                            <p className={styles.cloudText}>
                                 {mode === 'save'
                                     ? 'Зберігайте прогрес на сервері, щоб грати на будь-якому пристрої.'
                                     : 'Завантажте збереження з сервера. Поточний незбережений прогрес буде втрачено.'}
@@ -208,14 +206,14 @@ export default function SaveSlotsModal({ onClose, mode = 'save' }) { // mode: 's
                             <button
                                 onClick={handleCloudAction}
                                 disabled={isLoadingCloud}
-                                className={`${mode === 'save' ? 'bg-sky-600 hover:bg-sky-500' : 'bg-green-600 hover:bg-green-500'} text-white px-6 py-3 rounded-lg font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2`}
+                                className={`${styles.cloudButton} ${mode === 'save' ? styles.cloudSave : styles.cloudLoad} ${isLoadingCloud ? styles.disabled : ''}`}
                             >
-                                {isLoadingCloud && <span className="animate-spin">⏳</span>}
+                                {isLoadingCloud && <span className={styles.spinner}>⏳</span>}
                                 {mode === 'save' ? 'Зберегти на Сервер' : 'Завантажити з Сервера'}
                             </button>
 
                             {gameState.lastSyncTime && (
-                                <div className="mt-4 text-[10px] text-slate-500">
+                                <div className={styles.cloudSync}>
                                     Остання синхронізація: <br />
                                     {formatDate(new Date(gameState.lastSyncTime).toISOString())}
                                 </div>
@@ -224,8 +222,8 @@ export default function SaveSlotsModal({ onClose, mode = 'save' }) { // mode: 's
                     )}
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-700">
-                    <p className="text-[10px] text-slate-500 text-center">
+                <div className={styles.footer}>
+                    <p className={styles.footerText}>
                         {activeTab === 'local' ? 'Зберігаються лише в цьому браузері' : 'Прив’язано до вашого Telegram акаунту'}
                     </p>
                 </div>

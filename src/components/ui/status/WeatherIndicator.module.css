@@ -1,0 +1,86 @@
+.indicator {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: default;
+}
+
+.ok {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.blocked {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.icon {
+  font-size: 18px;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #bfdbfe;
+}
+
+.blocked .name {
+  color: #fca5a5;
+}
+
+.subtitle {
+  font-size: 10px;
+  color: #e2e8f0;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 12px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+  z-index: 50;
+}
+
+.indicator:hover .tooltip {
+  opacity: 1;
+}
+
+.title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.water {
+  color: #38bdf8;
+}
+
+.moodGood {
+  color: #34d399;
+}
+
+.moodBad {
+  color: #fca5a5;
+}
+
+.blockedText {
+  color: #f87171;
+}

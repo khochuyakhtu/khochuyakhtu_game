@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useUIStore from '../../stores/useUIStore';
 import useGameStore from '../../stores/useGameStore';
 import { CONFIG } from '../../game/config';
+import styles from './MissionResultModal.module.css';
 
 export default function MissionResultModal() {
     const isOpen = useUIStore((state) => state.missionResultModalOpen);
@@ -23,54 +24,54 @@ export default function MissionResultModal() {
         <AnimatePresence>
             {isOpen && (
                 <motion.div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    className={styles.backdrop}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                 >
                     <div
-                        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                        className={styles.scrim}
                         onClick={close}
                     />
 
                     <motion.div
-                        className="relative w-full max-w-md bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl p-6 space-y-4 text-white"
+                        className={styles.modal}
                         initial={{ scale: 0.9, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0, y: 20 }}
                     >
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-bold flex items-center gap-2">
+                        <div className={styles.header}>
+                            <h3 className={styles.title}>
                                 <span>✅</span> Місію виконано
                             </h3>
                             <button
                                 onClick={close}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700"
+                                className={styles.closeButton}
                             >
                                 ✕
                             </button>
                         </div>
 
-                        <div className="space-y-2 text-sm text-slate-200">
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">Карта</span>
-                                <span className="font-semibold">{mapName}</span>
+                        <div className={styles.body}>
+                            <div className={styles.row}>
+                                <span className={styles.label}>Карта</span>
+                                <span className={styles.value}>{mapName}</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">Місія</span>
-                                <span className="font-semibold">#{result?.missionNumber || '?'}</span>
+                            <div className={styles.row}>
+                                <span className={styles.label}>Місія</span>
+                                <span className={styles.value}>#{result?.missionNumber || '?'}</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">Нагорода</span>
-                                <span className="font-semibold text-emerald-400">{moneyReward}💰</span>
+                            <div className={styles.row}>
+                                <span className={styles.label}>Нагорода</span>
+                                <span className={`${styles.value} ${styles.success}`}>{moneyReward}💰</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">Дистанція</span>
-                                <span className="font-semibold">{result?.distance ?? 0} м</span>
+                            <div className={styles.row}>
+                                <span className={styles.label}>Дистанція</span>
+                                <span className={styles.value}>{result?.distance ?? 0} м</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">Час</span>
-                                <span className="font-semibold">{result?.timeSeconds ?? 0} с</span>
+                            <div className={styles.row}>
+                                <span className={styles.label}>Час</span>
+                                <span className={styles.value}>{result?.timeSeconds ?? 0} с</span>
                             </div>
                         </div>
                     </motion.div>

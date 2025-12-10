@@ -8,6 +8,7 @@ import GameGrid from '../inventory/GameGrid';
 import EquipSlots from '../inventory/EquipSlots';
 import { CONFIG, Haptics, getCrewUpgradeCost, getEngineerIntervalFrames, getSupplierIntervalFrames } from '../../game/config';
 import useSettingsStore from '../../stores/useSettingsStore';
+import styles from './GarageModal.module.css';
 
 
 export default function GarageModal() {
@@ -199,77 +200,60 @@ export default function GarageModal() {
     return (
         <>
             <motion.div
-                className="modal-backdrop"
+                className={styles.backdrop}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                style={{
-                    position: 'fixed',
-                    inset: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 50
-                }}
             >
                 <motion.div
-                    className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto custom-scroll"
+                    className={styles.modal}
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
-                    style={{
-                        WebkitOverflowScrolling: 'touch',
-                        overscrollBehavior: 'contain',
-                        touchAction: 'pan-y'
-                    }}
                     // Ensure touches propagate for scrolling
                     onPointerDown={(e) => e.stopPropagation()}
                 >
-                    {/* Header */}
-                    <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+                    <div className={styles.header}>
                         <div>
-                            <h2 className="text-2xl font-bold text-white">
+                            <h2 className={styles.title}>
                                 Док (Пауза){' '}
-                                <span className="text-sm text-green-400 ml-2">
+                                <span className={styles.money}>
                                     ${player.money}
                                 </span>
                             </h2>
-                            <div className="flex gap-2 text-[10px] text-slate-400 mt-1">
+                            <div className={styles.tabs}>
                                 <button
                                     onClick={() => setActiveTab('parts')}
-                                    className={`hover:text-white underline ${activeTab === 'parts' ? 'text-white' : ''}`}
+                                    className={`${styles.tab} ${activeTab === 'parts' ? styles.tabActive : ''}`}
                                 >
                                     Запчастини
                                 </button>
-                                <span>|</span>
+                                <span className={styles.tabDivider}>|</span>
                                 <button
                                     onClick={() => setActiveTab('crew')}
-                                    className={`hover:text-white underline ${activeTab === 'crew' ? 'text-white' : ''}`}
+                                    className={`${styles.tab} ${activeTab === 'crew' ? styles.tabActive : ''}`}
                                 >
                                     Екіпаж
                                 </button>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className={styles.headerActions}>
                             <button
                                 onClick={handleClose}
-                                className="text-slate-400 hover:text-white text-3xl px-2"
+                                className={styles.close}
                             >
                                 ×
                             </button>
                         </div>
                     </div>
 
-                    {/* Parts Tab */}
                     {activeTab === 'parts' && (
                         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-                            <div className="space-y-4">
+                            <div className={styles.section}>
                                 <EquipSlots />
 
-                                {/* Market */}
                                 <div>
-                                    <h3 className="text-slate-300 text-[10px] uppercase tracking-wider font-bold mb-2">
+                                    <h3 className={styles.sectionLabel}>
                                         Ринок (${(() => {
                                             let cost = 10;
                                             if (player.crew?.merchant?.hired) {
@@ -279,13 +263,13 @@ export default function GarageModal() {
                                             return cost;
                                         })()})
                                     </h3>
-                                    <div className="grid grid-cols-5 gap-2">
+                                    <div className={styles.marketGrid}>
                                         {Object.keys(CONFIG.partTypes).map((type) => (
                                             <button
                                                 key={type}
                                                 onPointerDown={(e) => e.stopPropagation()}
                                                 onClick={() => handleBuyItem(type)}
-                                                className="bg-slate-700/80 hover:bg-slate-600 text-white p-2 rounded border border-slate-600 text-2xl active:scale-95 transition-all"
+                                                className={styles.marketButton}
                                             >
                                                 {CONFIG.partTypes[type].icon}
                                             </button>
@@ -293,20 +277,19 @@ export default function GarageModal() {
                                     </div>
                                 </div>
 
-                                {/* Inventory */}
                                 <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h3 className="text-slate-300 text-[10px] uppercase tracking-wider font-bold">
+                                    <div className={styles.inventoryHeader}>
+                                        <h3 className={styles.sectionLabel}>
                                             Склад
                                         </h3>
                                         <button
                                             onClick={handleAutoMerge}
-                                            className="text-[10px] bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-white"
+                                            className={styles.autoMerge}
                                         >
                                             Auto-Merge
                                         </button>
                                     </div>
-                                    <div className="bg-slate-800/30 rounded-xl p-3 border border-slate-700/30">
+                                    <div className={styles.inventoryGrid}>
                                         <GameGrid standalone={false} />
                                     </div>
                                 </div>
@@ -314,15 +297,14 @@ export default function GarageModal() {
                         </DndContext>
                     )}
 
-                    {/* Crew Tab */}
                     {activeTab === 'crew' && (
-                        <div className="space-y-3 pr-2 pb-10">
-                            <h3 className="text-slate-300 text-sm uppercase tracking-wider font-bold sticky top-0 bg-slate-900 pb-2 z-10">
+                        <div className={styles.sectionCrew}>
+                            <h3 className={styles.crewHeading}>
                                 Найняти Екіпаж
                             </h3>
 
-                            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                                <div className="md:col-span-2 space-y-2">
+                            <div className={styles.crewGrid}>
+                                <div className={styles.crewList}>
                                     {crewList.map((crew) => {
                                         const memberLevel = crew.member?.level || 0;
                                         const bonusText = getBonusText(crew, memberLevel);
@@ -332,20 +314,20 @@ export default function GarageModal() {
                                             <button
                                                 key={crew.key}
                                                 onClick={() => setSelectedCrewKey(crew.key)}
-                                                className={`w-full text-left bg-slate-800 p-3 rounded-lg border transition-all ${isSelected ? 'border-cyan-500 shadow-cyan-500/20 shadow-lg' : 'border-slate-700 hover:border-slate-500'}`}
+                                                className={`${styles.crewCard} ${isSelected ? styles.crewCardActive : ''}`}
                                             >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="text-3xl">{crew.icon}</div>
-                                                    <div className="flex-1">
-                                                        <div className="font-bold text-white">{crew.name}</div>
-                                                        <div className="text-[10px] text-slate-400">{crew.desc}</div>
+                                                <div className={styles.crewRow}>
+                                                    <div className={styles.crewIcon}>{crew.icon}</div>
+                                                    <div className={styles.crewInfo}>
+                                                        <div className={styles.crewName}>{crew.name}</div>
+                                                        <div className={styles.crewDesc}>{crew.desc}</div>
                                                         {crew.member.hired && (
-                                                            <div className="flex flex-col gap-0.5 mt-1">
-                                                                <div className="text-[9px] text-green-400 font-bold">
+                                                            <div className={styles.crewStats}>
+                                                                <div className={styles.crewLevel}>
                                                                     Рівень: {crew.member.level}
                                                                 </div>
                                                                 {bonusText && (
-                                                                    <div className="text-[9px] text-yellow-400">
+                                                                    <div className={styles.crewBonus}>
                                                                         💎 {bonusText}
                                                                     </div>
                                                                 )}
@@ -359,39 +341,39 @@ export default function GarageModal() {
                                 </div>
 
                                 {selectedCrew && (
-                                    <div className="md:col-span-3 bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-16 h-16 rounded-xl bg-slate-700 flex items-center justify-center text-4xl">
+                                    <div className={styles.crewDetails}>
+                                        <div className={styles.crewDetailsHeader}>
+                                            <div className={styles.crewAvatar}>
                                                 {selectedCrew.photo || selectedCrew.icon || '👤'}
                                             </div>
                                             <div>
-                                                <div className="text-white font-bold text-lg">{selectedCrew.name}</div>
-                                                <div className="text-slate-400 text-sm">{selectedCrew.desc}</div>
+                                                <div className={styles.crewDetailsName}>{selectedCrew.name}</div>
+                                                <div className={styles.crewDetailsDesc}>{selectedCrew.desc}</div>
                                             </div>
                                         </div>
 
-                                        <div className="bg-slate-900/60 rounded-lg p-3 space-y-2 border border-slate-700/50">
-                                            <div className="text-slate-300 text-xs uppercase font-bold">Поточний рівень</div>
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-slate-400">Рівень: {getBonusComparison(selectedCrew).currentLevel}</span>
-                                                <span className="text-yellow-400 text-xs">{getBonusComparison(selectedCrew).current}</span>
+                                        <div className={styles.crewLevels}>
+                                            <div className={styles.levelLabel}>Поточний рівень</div>
+                                            <div className={styles.levelRow}>
+                                                <span className={styles.levelText}>Рівень: {getBonusComparison(selectedCrew).currentLevel}</span>
+                                                <span className={styles.levelCurrent}>{getBonusComparison(selectedCrew).current}</span>
                                             </div>
-                                            <div className="text-slate-300 text-xs uppercase font-bold">Наступний рівень</div>
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-slate-400">Рівень: {getBonusComparison(selectedCrew).nextLevel}</span>
-                                                <span className="text-emerald-400 text-xs">
+                                            <div className={styles.levelLabel}>Наступний рівень</div>
+                                            <div className={styles.levelRow}>
+                                                <span className={styles.levelText}>Рівень: {getBonusComparison(selectedCrew).nextLevel}</span>
+                                                <span className={styles.levelNext}>
                                                     {getBonusComparison(selectedCrew).next}
                                                 </span>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between">
-                                            <div className="text-sm text-slate-300">
+                                        <div className={styles.crewActions}>
+                                            <div className={styles.cost}>
                                                 Вартість: ${getCrewUpgradeCost(selectedCrew.member?.hired ? selectedCrew.member.level + 1 : 1)}
                                             </div>
                                             <button
                                                 onClick={() => handleHireCrew(selectedCrew.key)}
-                                                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-bold border border-green-700 active:scale-95 transition-all"
+                                                className={styles.hireButton}
                                             >
                                                 {selectedCrew.member?.hired ? 'Покращити' : 'Найняти'}
                                             </button>

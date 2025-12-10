@@ -1,0 +1,68 @@
+.container {
+  position: absolute;
+  bottom: 24px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 10;
+}
+
+.button {
+  position: relative;
+  overflow: hidden;
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #fff;
+  transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.yellow {
+  background: #d97706;
+  border-color: #fbbf24;
+}
+
+.red {
+  background: #dc2626;
+  border-color: #f87171;
+}
+
+.green {
+  background: #16a34a;
+  border-color: #34d399;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.active {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.5);
+  animation: pulse 1s infinite;
+}
+
+.cooldown {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  transition: height 0.1s linear;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+  70% { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}

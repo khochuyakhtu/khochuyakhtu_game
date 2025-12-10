@@ -1,0 +1,295 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 12px;
+}
+
+.modal {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 420px;
+  width: 100%;
+  margin: 0 8px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 8px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.close {
+  font-size: 20px;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.close:hover {
+  color: #ffffff;
+}
+
+.tabs {
+  display: flex;
+  padding: 6px;
+  background: #1f2937;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  gap: 6px;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.tabActive {
+  background: #475569;
+  color: #ffffff;
+}
+
+.tabCloud {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.content {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slotCard {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.slotFilled {
+  background: #1f2937;
+  border-color: #475569;
+}
+
+.slotEmpty {
+  background: rgba(30, 41, 59, 0.5);
+  border-style: dashed;
+}
+
+.slotRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.slotInfo {
+  flex: 1;
+}
+
+.slotTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.slotMeta {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slotEmptyText {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.slotActions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.saveButton {
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.saveButton:hover {
+  background: #22c55e;
+}
+
+.saveButton:active {
+  transform: scale(0.97);
+}
+
+.loadButton {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.loadButton:hover {
+  background: #3b82f6;
+}
+
+.loadButton:active {
+  transform: scale(0.97);
+}
+
+.deleteButton {
+  background: rgba(248, 113, 113, 0.5);
+  color: #ffffff;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.deleteButton:hover {
+  background: rgba(248, 113, 113, 0.8);
+}
+
+.deleteButton:active {
+  transform: scale(0.97);
+}
+
+.cloudPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  padding: 24px;
+  background: rgba(30, 41, 59, 0.2);
+  border: 1px dashed #334155;
+  border-radius: 12px;
+}
+
+.cloudIcon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.cloudTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+
+.cloudText {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  max-width: 220px;
+}
+
+.cloudButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+}
+
+.cloudSave {
+  background: #0284c7;
+}
+
+.cloudSave:hover {
+  background: #0ea5e9;
+}
+
+.cloudLoad {
+  background: #16a34a;
+}
+
+.cloudLoad:hover {
+  background: #22c55e;
+}
+
+.cloudButton:active:not(.disabled) {
+  transform: scale(0.97);
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.cloudSync {
+  margin-top: 12px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #334155;
+}
+
+.footerText {
+  font-size: 10px;
+  color: #94a3b8;
+  text-align: center;
+}

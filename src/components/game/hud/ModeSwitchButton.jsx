@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import useGameStore from '../../../stores/useGameStore';
 import useUIStore from '../../../stores/useUIStore';
+import styles from './ModeSwitchButton.module.css';
 
 export default function ModeSwitchButton({ mode }) {
     const setMode = useGameStore((state) => state.setMode);
@@ -19,7 +20,7 @@ export default function ModeSwitchButton({ mode }) {
     return (
         <motion.button
             onClick={switchMode}
-            className="bg-cyan-600 text-white px-3 py-1.5 rounded-lg border-2 border-cyan-800 hover:bg-cyan-500 active:scale-95 transition-all shadow-lg text-sm font-bold"
+            className={styles.button}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
         >

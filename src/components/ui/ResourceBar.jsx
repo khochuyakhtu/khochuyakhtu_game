@@ -1,5 +1,7 @@
 import { RESOURCES } from '../../game/config';
 import useGameStore from '../../stores/useGameStore';
+import styles from './ResourceBar.module.css';
+import { formatNumber } from '../../utils/formatNumber';
 
 /**
  * ResourceBar - Displays main resources in header
@@ -36,8 +38,7 @@ export default function ResourceBar() {
     const populationMax = island.populationCap;
 
     return (
-        <div className="flex items-center gap-2 bg-slate-800/90 backdrop-blur-sm rounded-xl px-2.5 py-1.5 border border-slate-700/60 text-xs md:text-sm">
-            {/* Resources */}
+        <div className={styles.wrapper}>
             {displayResources.map((res) => (
                 <ResourceIcon
                     key={res.type}
@@ -48,12 +49,11 @@ export default function ResourceBar() {
                 />
             ))}
 
-            {/* Population */}
-            <div className="flex items-center gap-1 pl-2 border-l border-slate-600/50">
-                <span className="text-base md:text-lg">👥</span>
-                <span className="text-white font-bold text-[11px] md:text-sm leading-none">
+            <div className={styles.population}>
+                <span className={styles.popIcon}>👥</span>
+                <span className={styles.popValue}>
                     {populationCurrent}
-                    <span className="text-slate-400 font-normal">/{populationMax}</span>
+                    <span className={styles.popLimit}>/{populationMax}</span>
                 </span>
             </div>
         </div>
@@ -67,42 +67,22 @@ function ResourceIcon({ icon, value, limit, name }) {
     const displayValue = formatNumber(value);
     const isLow = limit && value < limit * 0.2;
     const isFull = limit && value >= limit;
+    const tone = isLow ? styles.low : isFull ? styles.full : '';
 
     return (
-        <div
-            className="flex items-center gap-1 group relative px-1"
-            title={name}
-        >
-            <span className="text-base md:text-lg leading-none">{icon}</span>
-            <span className={`font-bold text-[11px] md:text-sm leading-none ${isLow ? 'text-red-400' :
-                isFull ? 'text-green-400' :
-                    'text-white'
-                }`}>
+        <div className={styles.resource} title={name}>
+            <span className={styles.icon}>{icon}</span>
+            <span className={`${styles.value} ${tone}`}>
                 {displayValue}
                 {limit && (
-                    <span className="text-slate-500 text-[10px] md:text-xs font-normal">
+                    <span className={styles.limit}>
                         /{formatNumber(limit)}
                     </span>
                 )}
             </span>
-
-            {/* Tooltip */}
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+            <div className={styles.tooltip}>
                 {name}
             </div>
         </div>
     );
-}
-
-/**
- * Format large numbers (1000 -> 1k, 1000000 -> 1M)
- */
-function formatNumber(num) {
-    if (num >= 1000000) {
-        return (num / 1000000).toFixed(1) + 'M';
-    }
-    if (num >= 1000) {
-        return (num / 1000).toFixed(1) + 'k';
-    }
-    return Math.floor(num).toString();
 }

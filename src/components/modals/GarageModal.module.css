@@ -1,0 +1,374 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 960px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 12px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.money {
+  font-size: 14px;
+  color: #34d399;
+  margin-left: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+.tab {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.tab:hover {
+  color: #ffffff;
+}
+
+.tabActive {
+  color: #ffffff;
+}
+
+.tabDivider {
+  color: #94a3b8;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.close {
+  font-size: 28px;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.close:hover {
+  color: #ffffff;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sectionLabel {
+  font-size: 10px;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.marketGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.marketButton {
+  background: rgba(71, 85, 105, 0.8);
+  color: #ffffff;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #475569;
+  font-size: 24px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.marketButton:hover {
+  background: rgba(100, 116, 139, 0.9);
+}
+
+.marketButton:active {
+  transform: scale(0.97);
+}
+
+.inventoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.autoMerge {
+  font-size: 10px;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.autoMerge:hover {
+  background: #3b82f6;
+}
+
+.autoMerge:active {
+  transform: scale(0.97);
+}
+
+.inventoryGrid {
+  background: rgba(30, 41, 59, 0.3);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(51, 65, 85, 0.3);
+}
+
+.sectionCrew {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 8px;
+  padding-bottom: 40px;
+}
+
+.crewHeading {
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  padding-bottom: 8px;
+  z-index: 10;
+  font-size: 14px;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  border-bottom: 1px solid #1f2937;
+}
+
+.crewGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .crewGrid {
+    grid-template-columns: 2fr 3fr;
+  }
+}
+
+.crewList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.crewCard {
+  width: 100%;
+  text-align: left;
+  background: #1f2937;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.crewCard:hover {
+  border-color: #475569;
+}
+
+.crewCardActive {
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4), 0 8px 20px rgba(34, 211, 238, 0.15);
+}
+
+.crewRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.crewIcon {
+  font-size: 28px;
+}
+
+.crewInfo {
+  flex: 1;
+}
+
+.crewName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.crewDesc {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.crewStats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.crewLevel {
+  font-size: 9px;
+  color: #34d399;
+  font-weight: 700;
+}
+
+.crewBonus {
+  font-size: 9px;
+  color: #facc15;
+}
+
+.crewDetails {
+  background: #1f2937;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.crewDetailsHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.crewAvatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.crewDetailsName {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.crewDetailsDesc {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.crewLevels {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.levelLabel {
+  font-size: 10px;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.levelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.levelText {
+  color: #94a3b8;
+}
+
+.levelCurrent {
+  color: #facc15;
+  font-size: 12px;
+}
+
+.levelNext {
+  color: #34d399;
+  font-size: 12px;
+}
+
+.crewActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cost {
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+.hireButton {
+  background: #16a34a;
+  color: #ffffff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #15803d;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.hireButton:hover {
+  background: #22c55e;
+}
+
+.hireButton:active {
+  transform: scale(0.97);
+}

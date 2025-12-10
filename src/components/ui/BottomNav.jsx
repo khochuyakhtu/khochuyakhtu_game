@@ -1,15 +1,10 @@
 import { motion } from 'framer-motion';
 import useGameStore from '../../stores/useGameStore';
 import useUIStore from '../../stores/useUIStore';
+import styles from './BottomNav.module.css';
 
-/**
- * BottomNav - Island mode bottom navigation bar
- * Provides quick access to main island functions
- */
 export default function BottomNav({ activeTab, onTabChange }) {
-    const setScreen = useUIStore((state) => state.setScreen);
     const setModal = useUIStore((state) => state.setModal);
-    const setMode = useGameStore((state) => state.setMode);
     const weather = useGameStore((state) => state.island.weather);
     const canSail = weather?.effects?.canSail !== false;
 
@@ -21,50 +16,42 @@ export default function BottomNav({ activeTab, onTabChange }) {
     ];
 
     const handleExpedition = () => {
-        if (!canSail) {
-            // Optional: show some feedback why (storm, etc)
-            return;
-        }
-        // Open missions modal instead of direct start
+        if (!canSail) return;
         setModal('missions', true);
     };
 
     return (
         <motion.div
-            className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-700/50 px-2 py-2 safe-area-inset-bottom"
+            className={styles.wrapper}
             initial={{ y: 100 }}
             animate={{ y: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
-            <div className="flex items-center justify-around max-w-lg mx-auto">
-                {/* Navigation Tabs */}
-                {tabs.map((tab) => (
-                    <motion.button
-                        key={tab.id}
-                        className={`flex flex-col items-center px-3 py-1 rounded-lg transition-colors ${activeTab === tab.id
-                            ? 'bg-cyan-600/30 text-cyan-400'
-                            : 'text-slate-400 hover:text-white'
-                            }`}
-                        onClick={() => onTabChange(tab.id)}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <span className="text-xl">{tab.icon}</span>
-                        <span className="text-[10px] font-medium mt-0.5">{tab.label}</span>
-                    </motion.button>
-                ))}
+            <div className={styles.inner}>
+                {tabs.map((tab) => {
+                    const active = activeTab === tab.id;
+                    const tone = active ? styles.tabActive : styles.tab;
+                    return (
+                        <motion.button
+                            key={tab.id}
+                            className={tone}
+                            onClick={() => onTabChange(tab.id)}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            <span className={styles.icon}>{tab.icon}</span>
+                            <span className={styles.label}>{tab.label}</span>
+                        </motion.button>
+                    );
+                })}
 
-                {/* Expedition Button */}
                 <motion.button
-                    className={`flex flex-col items-center px-4 py-1 rounded-xl transition-colors ${canSail
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                        }`}
+                    className={`${styles.expedition} ${canSail ? styles.expeditionReady : styles.expeditionBlocked}`}
                     onClick={handleExpedition}
                     whileTap={canSail ? { scale: 0.95 } : undefined}
                     disabled={!canSail}
                 >
-                    <span className="text-xl">{canSail ? '⛵' : '⛈️'}</span>
-                    <span className="text-[10px] font-bold mt-0.5">
+                    <span className={styles.icon}>{canSail ? '⛵' : '⛈️'}</span>
+                    <span className={styles.label}>
                         {canSail ? 'В море!' : 'Шторм'}
                     </span>
                 </motion.button>

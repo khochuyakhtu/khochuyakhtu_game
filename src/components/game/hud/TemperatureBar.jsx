@@ -1,12 +1,14 @@
+import styles from './TemperatureBar.module.css';
+
 export default function TemperatureBar({ tempPercent }) {
-    const tempColor = tempPercent > 50 ? 'bg-orange-500' : 'bg-red-500';
+    const tempColorClass = tempPercent > 50 ? styles.warm : styles.cold;
 
     return (
-        <div className="flex items-center gap-1 w-[80px]">
-            <span className="text-[11px] text-slate-300">🌡️</span>
-            <div className="flex-1 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+        <div className={styles.bar}>
+            <span className={styles.icon}>🌡️</span>
+            <div className={styles.track}>
                 <div
-                    className={`${tempColor} h-full transition-all duration-300`}
+                    className={`${styles.fill} ${tempColorClass}`}
                     style={{ width: `${tempPercent}%` }}
                 />
             </div>

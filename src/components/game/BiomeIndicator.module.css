@@ -1,0 +1,72 @@
+.wrapper {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  padding: 6px 10px;
+  max-width: 92vw;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon {
+  font-size: 14px;
+}
+
+.name {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.depth {
+  font-size: 10px;
+  color: #34d399;
+  white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #cbd5e1;
+  margin-top: 2px;
+}
+
+.distance {
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.arrow {
+  color: #94a3b8;
+}
+
+.next {
+  font-weight: 600;
+  color: #22d3ee;
+  white-space: nowrap;
+}
+
+.progressTrack {
+  width: 100%;
+  height: 4px;
+  background: #1f2937;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #22d3ee, #2563eb);
+}

@@ -1,0 +1,69 @@
+.wrapper {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(51, 65, 85, 0.5);
+  padding: 8px 8px env(safe-area-inset-bottom);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 10px;
+  color: #94a3b8;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.tab:hover {
+  color: #ffffff;
+}
+
+.tabActive {
+  composes: tab;
+  background: rgba(8, 145, 178, 0.3);
+  color: #22d3ee;
+}
+
+.icon {
+  font-size: 18px;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.expedition {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 12px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.expeditionReady {
+  background: linear-gradient(90deg, #0891b2, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.3);
+}
+
+.expeditionBlocked {
+  background: #334155;
+  color: #94a3b8;
+  cursor: not-allowed;
+}

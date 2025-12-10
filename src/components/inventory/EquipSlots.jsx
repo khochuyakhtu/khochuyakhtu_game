@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'framer-motion';
 import useGameStore from '../../stores/useGameStore';
 import { CONFIG } from '../../game/config';
+import styles from './EquipSlots.module.css';
 
 // Draggable item inside equip slot
 function EquippedItem({ type, item }) {
@@ -17,7 +18,7 @@ function EquippedItem({ type, item }) {
     };
 
     const partConfig = CONFIG.partTypes[type];
-    const tierClass = `tier-${item.tier}`;
+    const tierClass = styles[`tier${item.tier}`] || '';
 
     return (
         <motion.div
@@ -25,13 +26,13 @@ function EquippedItem({ type, item }) {
             style={style}
             {...listeners}
             {...attributes}
-            className={`item-slot ${tierClass} cursor-grab active:cursor-grabbing w-full h-full`}
+            className={`${styles.itemSlot} ${tierClass} ${styles.draggable}`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
         >
-            <span className="select-none">{partConfig.icon}</span>
+            <span className={styles.icon}>{partConfig.icon}</span>
             {item.tier > 0 && (
-                <span className="absolute top-0 right-0 text-[8px] font-bold bg-black/50 px-1 rounded">
+                <span className={styles.tierBadge}>
                     {item.tier}/20
                 </span>
             )}
@@ -46,14 +47,14 @@ function EquipSlot({ type, label, item }) {
     });
 
     return (
-        <div className="flex flex-col items-center gap-1">
+        <div className={styles.slotWrapper}>
             <div
                 ref={setNodeRef}
-                className={`item-slot w-full aspect-square ${isOver ? 'ring-2 ring-yellow-400 bg-yellow-400/10' : ''} ${!item ? 'border-dashed' : ''}`}
+                className={`${styles.itemSlot} ${styles.emptySlot} ${isOver ? styles.dropActive : ''} ${!item ? styles.dashed : ''}`}
             >
                 {item && <EquippedItem type={type} item={item} />}
             </div>
-            <div className="text-[9px] text-slate-400 text-center">
+            <div className={styles.slotLabel}>
                 {label}
             </div>
         </div>
@@ -75,17 +76,17 @@ export default function EquipSlots() {
     const isYacht = equipped.length === 5;
 
     return (
-        <div className="bg-slate-800/50 p-3 rounded-xl mb-3 border border-slate-700/50">
-            <div className="flex justify-between items-center mb-2">
-                <h3 className="text-slate-300 text-[10px] uppercase tracking-wider font-bold">
+        <div className={styles.wrapper}>
+            <div className={styles.header}>
+                <h3 className={styles.title}>
                     Оснащення
                 </h3>
-                <span className={`text-[10px] ${isYacht ? 'text-emerald-400 font-bold' : 'text-red-400'}`}>
+                <span className={`${styles.status} ${isYacht ? styles.statusReady : styles.statusMissing}`}>
                     {isYacht ? 'Системи активні' : `Зібрано ${equipped.length}/5`}
                 </span>
             </div>
 
-            <div className="grid grid-cols-5 gap-2">
+            <div className={styles.grid}>
                 {equipSlots.map((slot) => (
                     <EquipSlot
                         key={slot.type}

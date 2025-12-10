@@ -3,6 +3,7 @@ import useUIStore from '../../stores/useUIStore';
 import useGameStore from '../../stores/useGameStore';
 import useNotificationStore from '../../stores/useNotificationStore';
 import { Haptics } from '../../game/config';
+import styles from './SavesScreen.module.css';
 
 export default function SavesScreen() {
     const setScreen = useUIStore((state) => state.setScreen);
@@ -45,24 +46,22 @@ export default function SavesScreen() {
     };
 
     return (
-        <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-y-auto">
-            <div className="max-w-2xl mx-auto p-5 flex flex-col h-full">
-                {/* Заголовок */}
-                <div className="flex items-center mb-6">
+        <div className={styles.screen}>
+            <div className={styles.container}>
+                <div className={styles.header}>
                     <button
                         onClick={() => setScreen('menu')}
-                        className="bg-slate-800/50 text-white px-4 py-2 rounded-lg mr-4 hover:bg-slate-700"
+                        className={styles.back}
                     >
                         ←
                     </button>
-                    <h2 className="text-3xl font-bold text-white">☁️ Хмарні Збереження</h2>
+                    <h2 className={styles.title}>☁️ Хмарні Збереження</h2>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 flex flex-col items-center justify-center text-center bg-slate-800/20 rounded-xl border border-dashed border-slate-700 p-8">
-                    <div className="text-7xl mb-6 text-sky-400">☁️</div>
-                    <h3 className="text-3xl text-white font-bold mb-4">Синхронізація</h3>
-                    <p className="text-slate-300 mb-8 max-w-md text-lg leading-relaxed">
+                <div className={styles.panel}>
+                    <div className={styles.cloudIcon}>☁️</div>
+                    <h3 className={styles.panelTitle}>Синхронізація</h3>
+                    <p className={styles.panelText}>
                         Ваш прогрес прив'язаний до Telegram акаунту. <br />
                         Завантажте гру з сервера, щоб продовжити на цьому пристрої.
                     </p>
@@ -70,22 +69,21 @@ export default function SavesScreen() {
                     <button
                         onClick={handleCloudLoad}
                         disabled={isLoadingCloud}
-                        className="bg-sky-600 hover:bg-sky-500 text-white px-10 py-5 rounded-2xl font-bold text-xl transition-all active:scale-95 disabled:opacity-50 flex items-center gap-4 shadow-xl shadow-sky-900/30 border border-sky-400/20"
+                        className={`${styles.primary} ${isLoadingCloud ? styles.disabled : ''}`}
                     >
-                        {isLoadingCloud ? <span className="animate-spin">⏳</span> : '📥'}
+                        {isLoadingCloud ? <span className={styles.spinner}>⏳</span> : '📥'}
                         <span>Завантажити Прогрес</span>
                     </button>
 
                     {gameState.lastSyncTime && (
-                        <div className="mt-8 text-sm text-slate-400 bg-slate-900/60 px-6 py-3 rounded-full border border-slate-700">
-                            🕒 Останнє збереження: <span className="text-white font-mono ml-2">{formatDate(new Date(gameState.lastSyncTime).toISOString())}</span>
+                        <div className={styles.lastSync}>
+                            🕒 Останнє збереження: <span className={styles.lastSyncValue}>{formatDate(new Date(gameState.lastSyncTime).toISOString())}</span>
                         </div>
                     )}
                 </div>
 
-                {/* Інформація */}
-                <div className="mt-8 p-4 bg-slate-800/30 rounded-xl border border-slate-700 text-center">
-                    <p className="text-slate-400 text-sm">
+                <div className={styles.info}>
+                    <p className={styles.infoText}>
                         💡 Щоб зберегти гру, скористайтеся кнопками на екрані <b>"🏝️ Острів"</b>.
                     </p>
                 </div>

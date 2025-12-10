@@ -4,6 +4,7 @@ import Slot from './Slot';
 import useGameStore from '../../stores/useGameStore';
 import useSettingsStore from '../../stores/useSettingsStore';
 import { Haptics } from '../../game/config';
+import styles from './GameGrid.module.css';
 
 export default function GameGrid({ standalone = true }) {
     const { inventory, mergeItems, moveItem } = useGameStore();
@@ -54,7 +55,7 @@ export default function GameGrid({ standalone = true }) {
 
     const content = (
         <motion.div
-            className="grid grid-cols-5 gap-2"
+            className={styles.grid}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
         >

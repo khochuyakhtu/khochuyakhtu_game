@@ -1,0 +1,53 @@
+.indicator {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  cursor: default;
+}
+
+.emoji {
+  font-size: 18px;
+}
+
+.value {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.good {
+  color: #34d399;
+}
+
+.neutral {
+  color: #facc15;
+}
+
+.bad {
+  color: #f87171;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+  z-index: 50;
+}
+
+.indicator:hover .tooltip {
+  opacity: 1;
+}
