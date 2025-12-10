@@ -6,9 +6,15 @@ import useGameStore from '../../stores/useGameStore';
  */
 export default function StatusIndicators() {
     const island = useGameStore((state) => state.island);
+    const gameState = useGameStore((state) => state.gameState);
 
     const { averageMood, averageHealth, weather } = island;
     const weatherConfig = CONFIG.weatherTypes[weather.type] || CONFIG.weatherTypes.sunny;
+    const calendar = gameState?.calendar || { day: 1, week: 1, month: 1, year: 1 };
+    const dayDuration = CONFIG.dayDuration || 3600;
+    const currentFrame = gameState?.gameTime || 0;
+    const dayFraction = (currentFrame % dayDuration) / dayDuration;
+    const hour = Math.floor(dayFraction * 24);
 
     return (
         <div className="flex items-center gap-2 bg-slate-800/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-slate-700/50">
@@ -19,7 +25,14 @@ export default function StatusIndicators() {
             <HealthIndicator level={averageHealth} />
 
             {/* Weather Indicator */}
-            <WeatherIndicator type={weather.type} config={weatherConfig} />
+            <WeatherIndicator type={weather.type} config={weatherConfig} calendar={calendar} hour={hour} />
+
+            {/* Time/Calendar */}
+            <div className="flex flex-col bg-slate-900/80 rounded-lg px-2 py-1 border border-slate-700 text-[10px] leading-tight text-white">
+                <span>Година: {hour.toString().padStart(2, '0')}:00</span>
+                <span>День: {calendar.day}</span>
+                <span>Тиж: {calendar.week} · Міс: {calendar.month} · Рік: {calendar.year}</span>
+            </div>
         </div>
     );
 }
@@ -78,8 +91,10 @@ function HealthIndicator({ level }) {
 /**
  * Weather indicator with icon and effects
  */
-function WeatherIndicator({ type, config }) {
+function WeatherIndicator({ type, config, calendar, hour }) {
     const canSail = config.effects.canSail;
+    const cal = calendar || { day: 1, week: 1, month: 1, year: 1 };
+    const hr = hour !== undefined ? hour.toString().padStart(2, '0') : '00';
 
     return (
         <div
@@ -88,9 +103,12 @@ function WeatherIndicator({ type, config }) {
             title="Погода"
         >
             <span className="text-lg">{config.icon}</span>
-            <span className={`font-bold text-sm ${canSail ? 'text-blue-300' : 'text-red-400'}`}>
-                {config.name}
-            </span>
+            <div className="flex flex-col leading-tight">
+                <span className={`font-bold text-sm ${canSail ? 'text-blue-300' : 'text-red-400'}`}>
+                    {config.name}
+                </span>
+                <span className="text-[10px] text-slate-200">{hr}:00 · Д{cal.day} Т{cal.week} М{cal.month} Р{cal.year}</span>
+            </div>
 
             {/* Tooltip with effects */}
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">

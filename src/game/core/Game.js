@@ -2,7 +2,8 @@
 import { Renderer } from '../systems/Renderer';
 import { InputManager } from '../systems/InputManager';
 import { EntityManager } from '../systems/EntityManager';
-import { CONFIG, getGunnerStats } from '../config';
+import { CONFIG, getGunnerStats, FRAMES_PER_DAY, FRAMES_PER_WEEK, calculateCalendar } from '../config';
+import useUIStore from '../../stores/useUIStore';
 
 export class Game {
     constructor(canvas, gameStore) {
@@ -108,7 +109,9 @@ export class Game {
         console.log('Game.start() isRecentLoad:', isRecentLoad);
         console.log('Player money before reset check:', state.player.money);
 
-        if (!isRecentLoad) {
+        const hasProgress = (state.gameState.gameTime || 0) > 0 || (state.resources.money || 0) > 0;
+
+        if (!isRecentLoad && !hasProgress) {
             // Повний скид стану гравця (гроші, позиція, температура, тощо)
             state.resetPlayer();
             // Reset game stats strictly on new game
@@ -152,7 +155,12 @@ export class Game {
             // Reset camera
             this.camY = -window.innerHeight / 2;
 
-            this.startMission();
+            const pendingMission = state.gameState.mission || state.expedition.currentMission;
+            if (pendingMission) {
+                this.startMission(pendingMission);
+            } else {
+                this.startMission();
+            }
 
         } else {
             console.log('Skipping reset, keeping saved data');
@@ -164,7 +172,7 @@ export class Game {
 
             // Restore mission
             if (gameState.mission) {
-                this.mission = gameState.mission;
+                this.startMission(gameState.mission);
             } else {
                 this.startMission();
             }
@@ -205,7 +213,11 @@ export class Game {
         if (player.isDead) return;
 
         this.gameTime++;
-        this.dayPhase = (this.gameTime % CONFIG.dayDuration) / CONFIG.dayDuration;
+        this.dayPhase = (this.gameTime % FRAMES_PER_DAY) / FRAMES_PER_DAY;
+
+        const calendar = calculateCalendar(this.gameTime);
+        const prevCalendar = state.gameState.calendar || {};
+        const weekAdvanced = calendar.week !== prevCalendar.week;
 
         // Update biome
         this.distanceTraveled = Math.abs(Math.min(0, player.y));
@@ -243,8 +255,13 @@ export class Game {
             state.updateGameState({
                 gameTime: this.gameTime,
                 distanceTraveled: this.distanceTraveled,
-                currentBiome: this.currentBiome
+                currentBiome: this.currentBiome,
+                calendar
             });
+
+            if (weekAdvanced) {
+                console.log('Weekly cycle triggered, week:', calendar.week);
+            }
         }
 
         // Update camera
@@ -528,12 +545,12 @@ export class Game {
                 c.y += (player.y - c.y) * 0.1;
                 if (d < 20) {
                     // MERCHANT: Gold bonus
-                    let goldValue = c.val;
+                    let goldValue = Number(c.val) || 0;
                     if (yacht.crew.merchant?.hired) {
                         const merchantLevel = Math.max(1, yacht.crew.merchant.level || 1);
                         // 2% bonus per level, max 100% at level 50
                         const bonusMultiplier = 1 + Math.min(1.0, merchantLevel * 0.02);
-                        goldValue = Math.floor(c.val * bonusMultiplier);
+                        goldValue = Math.floor(goldValue * bonusMultiplier);
                     }
                     state.addMoney(goldValue);
                     this.entities.coins.splice(i, 1);
@@ -906,22 +923,25 @@ export class Game {
         }
     }
 
-    startMission() {
+    startMission(missionFromStore = null) {
         const state = this.gameStore.getState();
         const player = state.player;
+
+        const baseMission = missionFromStore ? { ...missionFromStore } : null;
 
         const dist = 5000 + Math.random() * 5000;
         const angle = -Math.PI / 2 + (Math.random() - 0.5);
 
-        let tx = player.x + Math.cos(angle) * dist;
-        let ty = player.y + Math.sin(angle) * dist;
+        const tx = baseMission?.tx ?? Math.max(50, Math.min(window.innerWidth - 50, player.x + Math.cos(angle) * dist));
+        const ty = baseMission?.ty ?? (player.y + Math.sin(angle) * dist);
 
-        tx = Math.max(50, Math.min(window.innerWidth - 50, tx));
+        const reward = baseMission?.reward ?? { money: 200 + Math.floor(Math.abs(player.y) / 100) };
 
         this.mission = {
+            ...baseMission,
             tx,
             ty,
-            reward: 200 + Math.floor(Math.abs(player.y) / 100)
+            reward
         };
 
         state.updateGameState({ mission: this.mission });
@@ -929,8 +949,38 @@ export class Game {
 
     completeMission() {
         const state = this.gameStore.getState();
-        state.addMoney(this.mission.reward);
-        this.startMission();
+        const rewardMoney = typeof this.mission?.reward === 'number'
+            ? this.mission.reward
+            : (this.mission?.reward?.money || 0);
+
+        if (rewardMoney > 0) {
+            state.addMoney(rewardMoney);
+        }
+
+        if (state.completeMission) {
+            state.completeMission(this.mission);
+        }
+
+        // Store last mission result stats
+        if (state.setLastMissionResult) {
+            state.setLastMissionResult({
+                missionId: this.mission?.id,
+                mapId: this.mission?.mapId,
+                missionNumber: this.mission?.missionNumber,
+                reward: this.mission?.reward,
+                distance: state.gameState.distanceTraveled,
+                timeSeconds: Math.floor((state.gameState.gameTime || 0) / 60)
+            });
+        }
+
+        this.mission = null;
+        state.updateGameState({ mission: null });
+
+        // Open mission result modal
+        const uiStore = useUIStore.getState();
+        if (uiStore?.setModal) {
+            uiStore.setModal('missionResult', true);
+        }
     }
 
     draw() {

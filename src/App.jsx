@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useUIStore from './stores/useUIStore';
 import LoadingScreen from './components/screens/LoadingScreen';
@@ -37,7 +37,12 @@ function App() {
     }, []);
 
     // Load Game Config
+    const configLoadedRef = useRef(false);
+
     useEffect(() => {
+        if (configLoadedRef.current) return;
+        configLoadedRef.current = true;
+
         const init = async () => {
             // Load configuration from DB
             await initGameConfig();

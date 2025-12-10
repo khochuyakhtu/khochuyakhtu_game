@@ -3,22 +3,20 @@ import GameCanvas from '../game/GameCanvas';
 import GameHUD from '../game/GameHUD';
 import SkillButtons from '../game/SkillButtons';
 import MissionPanel from '../game/MissionPanel';
-import BiomeIndicator from '../game/BiomeIndicator';
 import GarageModal from '../modals/GarageModal';
 import GameOverModal from '../modals/GameOverModal';
+import MissionResultModal from '../modals/MissionResultModal';
 import useUIStore from '../../stores/useUIStore';
 
 export default function GameScreen() {
     const garageOpen = useUIStore((state) => state.garageOpen);
     const gameOverOpen = useUIStore((state) => state.gameOverOpen);
+    const missionResultOpen = useUIStore((state) => state.missionResultModalOpen);
 
     return (
         <div className="relative w-full h-full overflow-hidden bg-black">
             {/* Game Canvas (Game logic will be rendered here) */}
             <GameCanvas />
-
-            {/* Biome Indicator */}
-            <BiomeIndicator />
 
             {/* HUD Overlay */}
             <GameHUD />
@@ -41,6 +39,7 @@ export default function GameScreen() {
             {/* Modals */}
             {garageOpen && <GarageModal />}
             {gameOverOpen && <GameOverModal />}
+            {missionResultOpen && <MissionResultModal />}
         </div>
     );
 }

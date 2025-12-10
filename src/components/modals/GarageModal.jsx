@@ -12,10 +12,11 @@ import useSettingsStore from '../../stores/useSettingsStore';
 
 export default function GarageModal() {
     const { toggleGarage, garageTab, setGarageTab } = useUIStore();
-    const { player, buyItem, hireCrew, autoMerge, recalcStats, inventory, mergeItems, moveItem, equipItem, unequipItem, saveToCloud, loadFromCloud, gameState } = useGameStore();
+    const { player, yacht, buyItem, hireCrew, autoMerge, recalcStats, inventory, mergeItems, moveItem, equipItem, unequipItem, saveToCloud, loadFromCloud, gameState } = useGameStore();
     const addNotification = useNotificationStore((state) => state.addNotification);
     const vibration = useSettingsStore((state) => state.vibration);
     const [activeTab, setActiveTab] = useState('parts');
+    const [selectedCrewKey, setSelectedCrewKey] = useState(null);
 
     const sensors = useSensors(
         useSensor(MouseSensor, {
@@ -155,8 +156,45 @@ export default function GarageModal() {
     const crewList = Object.keys(CONFIG.crewTypes).map((key) => ({
         ...CONFIG.crewTypes[key],
         key,
-        member: (player.crew && player.crew[key]) || { hired: false, level: 0 }
+        member: (yacht.crew && yacht.crew[key]) || { hired: false, level: 0 }
     }));
+
+    const getBonusText = (crew, level) => {
+        const lvl = Math.max(0, level);
+        switch (crew.key) {
+            case 'merchant':
+                return `Знижка: ${(lvl * 2.5).toFixed(1)}%`;
+            case 'engineer':
+                return `Авто-злиття: раз в ${(getEngineerIntervalFrames(Math.max(1, lvl)) / 60).toFixed(1)}с`;
+            case 'supplier':
+                return `Постачання: раз в ${(getSupplierIntervalFrames(Math.max(1, lvl)) / 60).toFixed(1)}с`;
+            case 'quartermaster':
+                return `Слотів: +${lvl}`;
+            case 'gunner':
+                return lvl > 0 ? `Шкода + швидкостріл: рівень ${lvl}` : '';
+            case 'mechanic':
+                return `Відновлення корпусу й тепла: рівень ${lvl}`;
+            case 'doctor':
+                return lvl > 0 ? `Опір холоду та шанс врятувати: рівень ${lvl}` : 'Опір холоду та шанс врятувати: рівень 0';
+            case 'navigator':
+                return `Швидкість/маневреність: рівень ${lvl}`;
+            default:
+                return '';
+        }
+    };
+
+    const getBonusComparison = (crew) => {
+        const current = crew.member?.level || 0;
+        const next = crew.member?.hired ? current + 1 : 1;
+        return {
+            current: getBonusText(crew, current) || '—',
+            next: getBonusText(crew, next) || '—',
+            currentLevel: current,
+            nextLevel: next
+        };
+    };
+
+    const selectedCrew = crewList.find(c => c.key === selectedCrewKey) || crewList[0];
 
     return (
         <>
@@ -283,60 +321,84 @@ export default function GarageModal() {
                                 Найняти Екіпаж
                             </h3>
 
-                            {crewList.map((crew) => {
-                                // Safety checks
-                                const memberLevel = crew.member?.level || 0;
-                                const nextLevel = crew.member?.hired ? memberLevel + 1 : 1;
-                                const cost = getCrewUpgradeCost(nextLevel);
-                                const buttonLabel = `$${cost}`;
-                                const buttonDisabled = false;
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                <div className="md:col-span-2 space-y-2">
+                                    {crewList.map((crew) => {
+                                        const memberLevel = crew.member?.level || 0;
+                                        const bonusText = getBonusText(crew, memberLevel);
+                                        const isSelected = selectedCrew?.key === crew.key;
 
-                                // Calculate bonus display
-                                let bonusText = '';
-                                if (crew.key === 'merchant') bonusText = `Знижка: ${(memberLevel * 2.5).toFixed(1)}%`;
-                                else if (crew.key === 'engineer') bonusText = `Авто-злиття: раз в ${(getEngineerIntervalFrames(Math.max(1, memberLevel)) / 60).toFixed(1)}с`;
-                                else if (crew.key === 'supplier') bonusText = `Постачання: раз в ${(getSupplierIntervalFrames(Math.max(1, memberLevel)) / 60).toFixed(1)}с`;
-                                else if (crew.key === 'quartermaster') bonusText = `Слотів: +${memberLevel}`;
-                                else if (crew.key === 'gunner') bonusText = crew.member.hired ? `Шкода + швидкостріл: рівень ${memberLevel}` : '';
-                                else if (crew.key === 'mechanic') bonusText = crew.member.hired ? `Відновлення тепла посилено (рівень ${memberLevel})` : '';
-                                else if (crew.key === 'doctor') bonusText = crew.member.hired ? `Опір холоду та шанс врятувати: рівень ${memberLevel}` : '';
-                                // Add other descriptions as needed based on actual logic
-
-                                return (
-                                    <div
-                                        key={crew.key}
-                                        className="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700"
-                                    >
-                                        <div className="text-3xl">{crew.icon}</div>
-                                        <div className="flex-1">
-                                            <div className="font-bold text-white">{crew.name}</div>
-                                            <div className="text-[10px] text-slate-400">{crew.desc}</div>
-                                            {crew.member.hired && (
-                                                <div className="flex flex-col gap-0.5 mt-1">
-                                                    <div className="text-[9px] text-green-400 font-bold">
-                                                        Рівень: {crew.member.level}
+                                        return (
+                                            <button
+                                                key={crew.key}
+                                                onClick={() => setSelectedCrewKey(crew.key)}
+                                                className={`w-full text-left bg-slate-800 p-3 rounded-lg border transition-all ${isSelected ? 'border-cyan-500 shadow-cyan-500/20 shadow-lg' : 'border-slate-700 hover:border-slate-500'}`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="text-3xl">{crew.icon}</div>
+                                                    <div className="flex-1">
+                                                        <div className="font-bold text-white">{crew.name}</div>
+                                                        <div className="text-[10px] text-slate-400">{crew.desc}</div>
+                                                        {crew.member.hired && (
+                                                            <div className="flex flex-col gap-0.5 mt-1">
+                                                                <div className="text-[9px] text-green-400 font-bold">
+                                                                    Рівень: {crew.member.level}
+                                                                </div>
+                                                                {bonusText && (
+                                                                    <div className="text-[9px] text-yellow-400">
+                                                                        💎 {bonusText}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    {bonusText && (
-                                                        <div className="text-[9px] text-yellow-400">
-                                                            💎 {bonusText}
-                                                        </div>
-                                                    )}
                                                 </div>
-                                            )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {selectedCrew && (
+                                    <div className="md:col-span-3 bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-16 h-16 rounded-xl bg-slate-700 flex items-center justify-center text-4xl">
+                                                {selectedCrew.photo || selectedCrew.icon || '👤'}
+                                            </div>
+                                            <div>
+                                                <div className="text-white font-bold text-lg">{selectedCrew.name}</div>
+                                                <div className="text-slate-400 text-sm">{selectedCrew.desc}</div>
+                                            </div>
                                         </div>
-                                        <button
-                                            onClick={() => handleHireCrew(crew.key)}
-                                            disabled={buttonDisabled}
-                                            className={`${buttonDisabled
-                                                ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-                                                : 'bg-green-600 hover:bg-green-500 text-white'
-                                                } text-xs px-3 py-2 rounded font-bold transition-all active:scale-95 min-w-[60px]`}
-                                        >
-                                            {buttonLabel}
-                                        </button>
+
+                                        <div className="bg-slate-900/60 rounded-lg p-3 space-y-2 border border-slate-700/50">
+                                            <div className="text-slate-300 text-xs uppercase font-bold">Поточний рівень</div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-slate-400">Рівень: {getBonusComparison(selectedCrew).currentLevel}</span>
+                                                <span className="text-yellow-400 text-xs">{getBonusComparison(selectedCrew).current}</span>
+                                            </div>
+                                            <div className="text-slate-300 text-xs uppercase font-bold">Наступний рівень</div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-slate-400">Рівень: {getBonusComparison(selectedCrew).nextLevel}</span>
+                                                <span className="text-emerald-400 text-xs">
+                                                    {getBonusComparison(selectedCrew).next}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-sm text-slate-300">
+                                                Вартість: ${getCrewUpgradeCost(selectedCrew.member?.hired ? selectedCrew.member.level + 1 : 1)}
+                                            </div>
+                                            <button
+                                                onClick={() => handleHireCrew(selectedCrew.key)}
+                                                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-bold border border-green-700 active:scale-95 transition-all"
+                                            >
+                                                {selectedCrew.member?.hired ? 'Покращити' : 'Найняти'}
+                                            </button>
+                                        </div>
                                     </div>
-                                );
-                            })}
+                                )}
+                            </div>
                         </div>
                     )}
                 </motion.div>

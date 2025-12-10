@@ -5,17 +5,13 @@ import useSettingsStore from '../../stores/useSettingsStore';
 
 export default function GameOverModal() {
     const { toggleGameOver, setScreen } = useUIStore();
-    const { player } = useGameStore();
+    const { player, resetAfterGameOver } = useGameStore();
     const saveScore = useSettingsStore((state) => state.saveScore);
 
-    const handleRespawn = () => {
+    const handleReturn = () => {
         toggleGameOver(false);
-
-        // Restart the game via global reference
-        // Game.start() will call resetPlayer() automatically
-        if (window.__gameInstance__) {
-            window.__gameInstance__.start();
-        }
+        resetAfterGameOver();
+        setScreen('island');
     };
 
 
@@ -47,10 +43,10 @@ export default function GameOverModal() {
                 </div>
 
                 <button
-                    onClick={handleRespawn}
+                    onClick={handleReturn}
                     className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-lg shadow-lg mb-3 transition-all active:scale-95"
                 >
-                    Відродитися
+                    Повернутись на острів
                 </button>
 
                 <button

@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion';
 import useUIStore from '../../stores/useUIStore';
+import useGameStore from '../../stores/useGameStore';
 
 export default function MainMenu() {
     const setScreen = useUIStore((state) => state.setScreen);
+    const startNewGame = useGameStore((state) => state.startNewGame);
 
     const menuItems = [
         {
@@ -86,7 +88,12 @@ export default function MainMenu() {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1 }}
-                            onClick={() => setScreen(item.screen)}
+                            onClick={() => {
+                                if (item.id === 'start') {
+                                    startNewGame();
+                                }
+                                setScreen(item.screen);
+                            }}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                         >

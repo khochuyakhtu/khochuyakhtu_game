@@ -36,6 +36,24 @@ export let INITIAL_RESOURCE_LIMITS = {
 // CONFIGURATION CONTAINER
 // ============================================================
 
+export const FRAMES_PER_SECOND = 60;
+export const FRAMES_PER_HOUR = FRAMES_PER_SECOND * 60; // 1 in-game hour = 1 real minute (60s)
+export const FRAMES_PER_DAY = FRAMES_PER_HOUR * 24;
+export const FRAMES_PER_WEEK = FRAMES_PER_DAY * 7;
+
+export const calculateCalendar = (gameTimeFrames = 0) => {
+    const totalDays = Math.floor(gameTimeFrames / FRAMES_PER_DAY);
+    return {
+        day: totalDays + 1,
+        dayOfWeek: (totalDays % 7) + 1,
+        week: Math.floor(totalDays / 7) + 1,
+        weekInMonth: (Math.floor(totalDays / 7) % 4) + 1,
+        month: Math.floor(totalDays / (7 * 4)) + 1,
+        monthInYear: ((Math.floor(totalDays / (7 * 4)) % 12) + 1),
+        year: Math.floor(totalDays / (7 * 4 * 12)) + 1
+    };
+};
+
 export let CONFIG = {
     biomes: [],
     yachtModules: {},

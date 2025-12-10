@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 import useGameStore from '../../stores/useGameStore';
 
 export default function MissionPanel() {
     const { gameState, player } = useGameStore();
+    const [expanded, setExpanded] = useState(true);
     const mission = gameState.mission;
 
     if (!mission) return null;
@@ -13,25 +15,44 @@ export default function MissionPanel() {
         ? `${(distance / 1000).toFixed(1)}km`
         : `${distance}m`;
 
+    const rewardMoney = typeof mission.reward === 'number'
+        ? mission.reward
+        : (mission.reward?.money || 0);
+
+    const missionTitle = mission.description || `Доставте вантаж (Місія ${mission.missionNumber || '?'})`;
+
     return (
         <motion.div
-            className="absolute top-44 left-0 px-3 py-2 rounded-r-lg max-w-[200px] bg-gradient-to-r from-slate-900/90 to-transparent border-l-4 border-yellow-400 z-10"
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
+            className="fixed left-2 right-2 top-[140px] md:top-40 px-3 py-2 rounded-lg max-w-[320px] bg-slate-900/90 border border-slate-800 shadow-lg z-20 mx-auto"
+            style={{ insetInline: 'auto' }}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
         >
-            <div className="text-[10px] text-yellow-400 font-bold uppercase mb-1">
-                Активна Місія
+            <div className="flex items-center justify-between">
+                <div className="text-[10px] text-yellow-400 font-bold uppercase">
+                    Активна Місія
+                </div>
+                <button
+                    onClick={() => setExpanded((prev) => !prev)}
+                    className="text-slate-400 text-xs px-2 py-1 rounded hover:text-white"
+                >
+                    {expanded ? '−' : '+'}
+                </button>
             </div>
-            <div className="text-sm text-white font-semibold">
-                Доставте вантаж
-            </div>
-            <div className="text-[10px] text-slate-400 mt-1 flex justify-between">
-                <span id="mission-dist">{distanceText}</span>
-                <span className="text-green-400" id="mission-reward">
-                    ${mission.reward || 100}
-                </span>
-            </div>
+
+            {expanded && (
+                <div className="space-y-1 mt-1">
+                    <div className="text-sm text-white font-semibold leading-snug">
+                        {missionTitle}
+                    </div>
+                    <div className="text-[10px] text-slate-400 flex justify-between gap-2">
+                        <span id="mission-dist">{distanceText}</span>
+                        <span className="text-green-400 whitespace-nowrap" id="mission-reward">
+                            ${rewardMoney}
+                        </span>
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 }

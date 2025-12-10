@@ -25,7 +25,7 @@ export default function SavesScreen() {
                 // Встановлюємо timestamp завантаження
                 localStorage.setItem('yacht-load-timestamp', Date.now().toString());
                 addNotification('success', 'Успішно завантажено!');
-                setScreen('game');
+                setScreen('island');
             } else {
                 addNotification('error', 'Не вдалося завантажити.', 3000);
             }

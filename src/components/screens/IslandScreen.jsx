@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useGameStore from '../../stores/useGameStore';
 import useUIStore from '../../stores/useUIStore';
 import GarageModal from '../modals/GarageModal';
@@ -7,7 +7,7 @@ import SaveSlotModal from '../modals/SaveSlotsModal';
 import BuildingDetailsModal from '../modals/BuildingDetailsModal';
 import WorkerAssignmentModal from '../modals/WorkerAssignmentModal';
 import MissionsModal from '../modals/MissionsModal';
-import { CONFIG, RESOURCES, getBuildingUpgradeCost, getBuildingOutput } from '../../game/config';
+import { CONFIG, RESOURCES, getBuildingUpgradeCost, getBuildingOutput, calculateCalendar, FRAMES_PER_SECOND, FRAMES_PER_WEEK } from '../../game/config';
 import BottomNav from '../ui/BottomNav';
 
 /**
@@ -19,18 +19,42 @@ export default function IslandScreen() {
 
     const island = useGameStore((state) => state.island);
     const resources = useGameStore((state) => state.resources);
+    const gameState = useGameStore((state) => state.gameState);
 
     const { buildings, residents, populationCap, weather } = island;
     const weatherConfig = CONFIG.weatherTypes[weather.type] || CONFIG.weatherTypes.sunny;
+    const calendar = gameState?.calendar || { day: 1, week: 1, month: 1, year: 1 };
+    const dayDuration = CONFIG.dayDuration || 3600;
+    const currentFrame = gameState?.gameTime || 0;
+    const dayFraction = (currentFrame % dayDuration) / dayDuration;
+    const hour = Math.floor(dayFraction * 24).toString().padStart(2, '0');
 
     const saveToCloud = useGameStore((state) => state.saveToCloud);
     const loadFromCloud = useGameStore((state) => state.loadFromCloud);
+    const tickIsland = useGameStore((state) => state.tickIsland);
+    const updateGameState = useGameStore((state) => state.updateGameState);
 
     const handleCloudSave = async () => {
         const success = await saveToCloud();
         if (success) alert('✅ Гра збережена в хмару!');
         else alert('❌ Помилка збереження');
     };
+
+    // Advance in-game time on island: 1 real second = 60 frames (1 in-game minute)
+    useEffect(() => {
+        const id = setInterval(() => {
+            const store = useGameStore.getState();
+            const prevTime = store.gameState.gameTime || 0;
+            const newTime = prevTime + FRAMES_PER_SECOND; // 60 frames per real second
+            const newCalendar = calculateCalendar(newTime);
+            const prevWeek = store.gameState.calendar?.week;
+            store.updateGameState({ gameTime: newTime, calendar: newCalendar });
+            if (prevWeek && newCalendar.week !== prevWeek) {
+                store.tickIsland();
+            }
+        }, 1000);
+        return () => clearInterval(id);
+    }, []);
 
 
 
@@ -62,13 +86,16 @@ export default function IslandScreen() {
                         </div>
                     </div>
 
-                    {/* Weather */}
+                    {/* Weather with calendar */}
                     <div className="bg-slate-800/60 rounded-xl px-3 py-1.5 flex items-center gap-2">
                         <span className="text-xl">{weatherConfig.icon}</span>
-                        <div>
+                        <div className="leading-tight">
                             <p className="text-white font-bold text-xs">{weatherConfig.name}</p>
                             <p className="text-[10px] text-slate-400">
                                 {weatherConfig.effects.canSail ? '⛵ Можна плисти' : '⛔ Шторм'}
+                            </p>
+                            <p className="text-[10px] text-slate-200">
+                                {hour}:00 · Д{calendar.day} Т{calendar.week} М{calendar.month} Р{calendar.year}
                             </p>
                         </div>
                     </div>
@@ -193,7 +220,12 @@ function OverviewTab({ island, resources, weatherConfig }) {
                     <h3 className="text-white font-bold">📈 Виробництво / Цикл</h3>
                     <motion.button
                         className="bg-green-600 text-white text-xs px-3 py-1 rounded-lg font-bold"
-                        onClick={() => tickIsland()}
+                        onClick={() => {
+                            tickIsland();
+                            const newTime = (gameState?.gameTime || 0) + FRAMES_PER_WEEK;
+                            const newCal = calculateCalendar(newTime);
+                            updateGameState({ gameTime: newTime, calendar: newCal });
+                        }}
                         whileTap={{ scale: 0.95 }}
                     >
                         ▶ Запустити цикл
@@ -640,6 +672,7 @@ function ResidentsTab({ residents, buildings }) {
                 onClose={() => setSelectedWorker(null)}
                 worker={selectedWorker}
                 buildings={buildings}
+                residents={residents}
                 onAssign={(buildingId) => assignWorker(selectedWorker.id, buildingId)}
             />
         </motion.div>

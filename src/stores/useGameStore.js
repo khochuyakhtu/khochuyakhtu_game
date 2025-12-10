@@ -16,7 +16,11 @@ import {
     getYachtRadarRange,
     generateName,
     EVENT_TYPES,
-    CONFIG
+    CONFIG,
+    calculateCalendar,
+    FRAMES_PER_DAY,
+    FRAMES_PER_WEEK,
+    FRAMES_PER_SECOND
 } from '../game/config';
 
 // ============================================================
@@ -69,7 +73,8 @@ const createInitialExpeditionState = () => ({
     currentBiome: null,
     gameTime: 0,
     dayPhase: 0,
-    crewTimers: { supplier: 0, engineer: 0 }
+    crewTimers: { supplier: 0, engineer: 0 },
+    missionProgress: {} // mapId -> highest completed missionNumber
 });
 
 const createInitialPlayerState = () => ({
@@ -113,6 +118,19 @@ const createInitialEquip = () => ({
     radar: null
 });
 
+const createInitialGameState = () => ({
+    paused: true,
+    gameTime: 0,
+    dayPhase: 0,
+    distanceTraveled: 0,
+    currentBiome: null,
+    mission: null,
+    crewTimers: { supplier: 0, engineer: 0 },
+    lastSyncTime: null,
+    expeditionBaselineResources: null,
+    calendar: calculateCalendar(0)
+});
+
 // ============================================================
 // MAIN STORE
 // ============================================================
@@ -139,6 +157,7 @@ const useGameStore = create(
 
             // Expedition state
             expedition: createInitialExpeditionState(),
+            lastMissionResult: null,
 
             // Player state (position, computed stats)
             player: createInitialPlayerState(),
@@ -148,23 +167,36 @@ const useGameStore = create(
             equip: createInitialEquip(),
 
             // Game state (legacy compatibility)
-            gameState: {
-                paused: true,
-                gameTime: 0,
-                dayPhase: 0,
-                distanceTraveled: 0,
-                currentBiome: null,
-                mission: null,
-                crewTimers: { supplier: 0, engineer: 0 },
-                lastSyncTime: null
-            },
+            gameState: createInitialGameState(),
 
             // ============================================================
             // MODE SWITCHING
             // ============================================================
 
             setMode: (mode) => set((state) => {
+                // Snapshot resources before going to expedition
+                if (mode === 'expedition' && state.mode === 'island') {
+                    state.gameState.expeditionBaselineResources = { ...state.resources };
+                }
+                // Clear baseline when back to island
+                if (mode === 'island') {
+                    state.gameState.expeditionBaselineResources = null;
+                }
                 state.mode = mode;
+            }),
+
+            resetAfterGameOver: () => set((state) => {
+                state.mode = 'island';
+                if (state.gameState.expeditionBaselineResources) {
+                    state.resources = { ...state.gameState.expeditionBaselineResources };
+                }
+                state.yacht = createInitialYachtState();
+                state.player = { ...createInitialPlayerState(), money: state.resources.money || 0 };
+                state.inventory = createInitialInventory();
+                state.equip = createInitialEquip();
+                state.expedition = createInitialExpeditionState();
+                state.gameState = createInitialGameState();
+                // Keep island/resources but clear crew by resetting yacht
             }),
 
             // ============================================================
@@ -206,7 +238,9 @@ const useGameStore = create(
 
             // Legacy: addMoney uses resources.money
             addMoney: (amount) => set((state) => {
-                state.resources.money += amount;
+                const delta = Number(amount) || 0;
+                const current = Number(state.resources.money) || 0;
+                state.resources.money = current + delta;
                 // Also update legacy player.money for backwards compatibility
                 if (state.player.money !== undefined) {
                     state.player.money = state.resources.money;
@@ -240,9 +274,17 @@ const useGameStore = create(
 
             assignWorker: (residentId, buildingId) => set((state) => {
                 const resident = state.island.residents.find(r => r.id === residentId);
-                if (resident) {
-                    resident.assignedBuildingId = buildingId;
+                const building = state.island.buildings.find(b => b.id === buildingId);
+                if (!resident || !building) return;
+
+                const config = state._getBuildingConfig(building.configId);
+                const slots = config?.slots || 0;
+                if (slots > 0) {
+                    const assigned = state.island.residents.filter(r => r.assignedBuildingId === buildingId).length;
+                    if (assigned >= slots) return; // building full
                 }
+
+                resident.assignedBuildingId = buildingId;
             }),
 
             unassignWorker: (residentId) => set((state) => {
@@ -861,8 +903,27 @@ const useGameStore = create(
                 state.resources = { ...INITIAL_RESOURCES };
             }),
 
+            startNewGame: () => set((state) => {
+                state.mode = 'island';
+                state.resources = { ...INITIAL_RESOURCES };
+                state.resourceLimits = { ...INITIAL_RESOURCE_LIMITS };
+                state.yacht = createInitialYachtState();
+                state.island = createInitialIslandState();
+                state.expedition = createInitialExpeditionState();
+                state.player = createInitialPlayerState();
+                state.inventory = createInitialInventory();
+                state.equip = createInitialEquip();
+                state.gameState = createInitialGameState();
+                state.lastMissionResult = null;
+            }),
+
             updateGameState: (updates) => set((state) => {
-                Object.assign(state.gameState, updates);
+                const nextGameState = { ...state.gameState, ...updates };
+                if (updates.gameTime !== undefined) {
+                    nextGameState.calendar = calculateCalendar(updates.gameTime);
+                    nextGameState.dayPhase = ((updates.gameTime % FRAMES_PER_DAY) / FRAMES_PER_DAY);
+                }
+                Object.assign(state.gameState, nextGameState);
                 // Sync with expedition state
                 if (updates.distanceTraveled !== undefined) {
                     state.expedition.distanceTraveled = updates.distanceTraveled;
@@ -870,6 +931,33 @@ const useGameStore = create(
                 if (updates.gameTime !== undefined) {
                     state.expedition.gameTime = updates.gameTime;
                 }
+            }),
+
+            // ============================================================
+            // MISSIONS
+            // ============================================================
+            startMission: (mission) => set((state) => {
+                state.expedition.currentMission = mission;
+                state.expedition.currentBiome = mission?.mapId || null;
+                state.gameState.mission = mission;
+            }),
+            completeMission: (mission) => set((state) => {
+                if (!mission?.mapId) return;
+                const current = state.expedition.missionProgress[mission.mapId] || 0;
+                if (mission.missionNumber > current) {
+                    state.expedition.missionProgress[mission.mapId] = mission.missionNumber;
+                }
+                state.expedition.currentMission = null;
+                state.gameState.mission = null;
+                state.lastMissionResult = {
+                    missionId: mission.id,
+                    mapId: mission.mapId,
+                    missionNumber: mission.missionNumber,
+                    reward: mission.reward
+                };
+            }),
+            setLastMissionResult: (result) => set((state) => {
+                state.lastMissionResult = result;
             }),
 
             // ============================================================
@@ -904,7 +992,10 @@ const useGameStore = create(
                 if (cloudState) {
                     get().loadSave(cloudState);
                     set((state) => {
+                        state.mode = 'island'; // Always resume on island after load
                         state.gameState.lastSyncTime = Date.now();
+                        state.gameState.mission = null;
+                        state.expedition.currentMission = null;
                     });
                     return true;
                 }
@@ -912,7 +1003,8 @@ const useGameStore = create(
             },
 
             loadSave: (saveData) => set((state) => {
-                if (saveData.mode) state.mode = saveData.mode;
+                // Always force island on load to avoid jumping into sea
+                state.mode = 'island';
                 if (saveData.resources) Object.assign(state.resources, saveData.resources);
                 if (saveData.yacht) Object.assign(state.yacht, saveData.yacht);
                 if (saveData.island) Object.assign(state.island, saveData.island);

@@ -36,7 +36,7 @@ export default function ResourceBar() {
     const populationMax = island.populationCap;
 
     return (
-        <div className="flex items-center gap-3 bg-slate-800/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-slate-700/50">
+        <div className="flex items-center gap-2 bg-slate-800/90 backdrop-blur-sm rounded-xl px-2.5 py-1.5 border border-slate-700/60 text-xs md:text-sm">
             {/* Resources */}
             {displayResources.map((res) => (
                 <ResourceIcon
@@ -50,8 +50,8 @@ export default function ResourceBar() {
 
             {/* Population */}
             <div className="flex items-center gap-1 pl-2 border-l border-slate-600/50">
-                <span className="text-lg">👥</span>
-                <span className="text-white font-bold text-sm">
+                <span className="text-base md:text-lg">👥</span>
+                <span className="text-white font-bold text-[11px] md:text-sm leading-none">
                     {populationCurrent}
                     <span className="text-slate-400 font-normal">/{populationMax}</span>
                 </span>
@@ -70,17 +70,17 @@ function ResourceIcon({ icon, value, limit, name }) {
 
     return (
         <div
-            className="flex items-center gap-1 group relative"
+            className="flex items-center gap-1 group relative px-1"
             title={name}
         >
-            <span className="text-lg">{icon}</span>
-            <span className={`font-bold text-sm ${isLow ? 'text-red-400' :
-                    isFull ? 'text-green-400' :
-                        'text-white'
+            <span className="text-base md:text-lg leading-none">{icon}</span>
+            <span className={`font-bold text-[11px] md:text-sm leading-none ${isLow ? 'text-red-400' :
+                isFull ? 'text-green-400' :
+                    'text-white'
                 }`}>
                 {displayValue}
                 {limit && (
-                    <span className="text-slate-500 text-xs font-normal">
+                    <span className="text-slate-500 text-[10px] md:text-xs font-normal">
                         /{formatNumber(limit)}
                     </span>
                 )}

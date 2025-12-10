@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { CONFIG } from '../../game/config';
 
-export default function WorkerAssignmentModal({ isOpen, onClose, worker, buildings, onAssign }) {
+export default function WorkerAssignmentModal({ isOpen, onClose, worker, buildings, residents = [], onAssign }) {
     if (!isOpen || !worker) return null;
 
     // Define profession-building compatibility
@@ -32,11 +32,8 @@ export default function WorkerAssignmentModal({ isOpen, onClose, worker, buildin
 
     const availableBuildings = buildings.filter(b => {
         const config = CONFIG.buildings[b.configId];
-        // Check slots
-        // Note: We need the residents list to check capacity correctly in a real scenario,
-        // but often 'buildings' passed here might need to be enriched or we check simple logic.
-        // For now, assuming caller passes buildings that *can* accept workers or we show all and indicate full.
-        return config && (config.slots || 0) > 0;
+        if (!config || (config.slots || 0) <= 0) return false;
+        return true;
     });
 
     return (
@@ -71,16 +68,21 @@ export default function WorkerAssignmentModal({ isOpen, onClose, worker, buildin
                                 availableBuildings.map(building => {
                                     const config = CONFIG.buildings[building.configId];
                                     const efficiency = getEfficiency(building.configId);
+                                    const assignedCount = residents.filter(r => r.assignedBuildingId === building.id).length;
+                                    const slots = config.slots || 0;
+                                    const isFull = slots > 0 && assignedCount >= slots;
 
                                     return (
                                         <motion.button
                                             key={building.id}
-                                            className={`w-full text-left bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 hover:border-cyan-500/50 transition-colors flex justify-between items-center group`}
+                                            className={`w-full text-left bg-slate-800/60 p-3 rounded-xl border ${isFull ? 'border-slate-700/50 opacity-50 cursor-not-allowed' : 'border-slate-700/50 hover:border-cyan-500/50'} transition-colors flex justify-between items-center group`}
                                             onClick={() => {
+                                                if (isFull) return;
                                                 onAssign(building.id);
                                                 onClose();
                                             }}
-                                            whileTap={{ scale: 0.98 }}
+                                            whileTap={isFull ? undefined : { scale: 0.98 }}
+                                            disabled={isFull}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <span className="text-2xl">{config.icon}</span>
@@ -89,12 +91,16 @@ export default function WorkerAssignmentModal({ isOpen, onClose, worker, buildin
                                                         {config.name}
                                                     </p>
                                                     <p className="text-slate-500 text-xs">Рівень {building.level}</p>
+                                                    {slots > 0 && (
+                                                        <p className="text-slate-500 text-[10px]">👷 {assignedCount}/{slots}</p>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="text-right">
                                                 <p className={`font-bold text-sm ${efficiency.color}`}>
                                                     {efficiency.label} {efficiency.bonus}
                                                 </p>
+                                                {isFull && <p className="text-amber-400 text-[10px]">Місць немає</p>}
                                             </div>
                                         </motion.button>
                                     );
