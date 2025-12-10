@@ -153,14 +153,34 @@ export class EntityManager {
             entities.floatingResources = [];
         }
 
+        // Log config once for debugging missing resources
+        if (!this._loggedFloatingConfig) {
+            console.log('Floating resources config:', CONFIG.floatingResources);
+            this._loggedFloatingConfig = true;
+        }
+
         const maxResources = 5 + Math.floor(currentBiome.danger / 2);
 
         CONFIG.floatingResources.forEach(resourceConfig => {
-            const spawnChance = resourceConfig.spawnRate * (1 + currentBiome.danger * 0.1);
+            const spawnRate = Number(resourceConfig.spawnRate) || 0;
+            const spawnChance = spawnRate * (1 + currentBiome.danger * 0.1);
 
             if (entities.floatingResources.length < maxResources && Math.random() < spawnChance) {
-                const [minAmount, maxAmount] = resourceConfig.baseAmount;
-                const amount = Math.floor(minAmount + Math.random() * (maxAmount - minAmount + 1));
+                const [minAmount, maxAmount] = resourceConfig.baseAmount || [1, 1];
+                const amount = Math.floor(minAmount + Math.random() * (Math.max(minAmount, maxAmount) - minAmount + 1));
+
+                // Log first few spawn attempts per type to diagnose missing stone
+                if (!this._spawnLogs) this._spawnLogs = {};
+                const count = this._spawnLogs[resourceConfig.type] || 0;
+                if (count < 3) {
+                    console.log('Spawning floating resource', resourceConfig.type, {
+                        spawnRate,
+                        spawnChance,
+                        amount,
+                        sprite: resourceConfig.sprite
+                    });
+                    this._spawnLogs[resourceConfig.type] = count + 1;
+                }
 
                 entities.floatingResources.push({
                     id: nanoid(),

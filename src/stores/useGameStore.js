@@ -132,6 +132,58 @@ const createInitialGameState = () => ({
     calendar: calculateCalendar(0)
 });
 
+// Utility: recalc population cap and storage limits based on current buildings
+const recalcHousingAndStorage = (state, getBuildingConfig) => {
+    const buildings = state.island.buildings || [];
+    let housingCap = 5;
+    const storageBonuses = { all: 0 };
+
+    buildings.forEach(building => {
+        const config = getBuildingConfig ? getBuildingConfig(building.configId) : CONFIG.buildings?.[building.configId];
+        if (!config) return;
+
+        const level = Math.max(1, building.level || 1);
+        const populationBonus =
+            config.populationBonus ??
+            config.population_bonus ??
+            config.effect?.populationBonus ??
+            config.effect?.population_bonus ??
+            0;
+        const effectType = config.effect?.type;
+        const populationFromEffectType = (['population', 'housing', 'residents', 'capacity'].includes(effectType))
+            ? (config.effect?.value || config.effect?.capacity || config.effect?.max || 0)
+            : 0;
+        const housingCategoryFallback = config.category === 'housing'
+            ? (config.effect?.capacity || config.effect?.value || config.slots || config.effect?.slots || config.effect?.bonus || 0)
+            : 0;
+        const totalPopulationBonus = populationBonus || populationFromEffectType || housingCategoryFallback;
+
+        if (totalPopulationBonus) {
+            housingCap += totalPopulationBonus * level;
+        }
+
+        if (config.effect?.type === 'storage') {
+            const amount = (config.effect.bonus || 0) * level;
+            const resources = config.effect.resources || [];
+            if (resources.includes('all')) {
+                storageBonuses.all += amount;
+            } else {
+                resources.forEach(res => {
+                    storageBonuses[res] = (storageBonuses[res] || 0) + amount;
+                });
+            }
+        }
+    });
+
+    state.island.populationCap = housingCap;
+
+    Object.keys(state.resourceLimits).forEach(res => {
+        const base = INITIAL_RESOURCE_LIMITS[res] || 50;
+        const bonus = (storageBonuses.all || 0) + (storageBonuses[res] || 0);
+        state.resourceLimits[res] = base + bonus;
+    });
+};
+
 // ============================================================
 // MAIN STORE
 // ============================================================
@@ -189,6 +241,7 @@ const useGameStore = create(
             }),
 
             resetAfterGameOver: () => set((state) => {
+                const preservedMissionProgress = { ...(state.expedition?.missionProgress || {}) };
                 state.mode = 'island';
                 if (state.gameState.expeditionBaselineResources) {
                     state.resources = { ...state.gameState.expeditionBaselineResources };
@@ -200,7 +253,10 @@ const useGameStore = create(
                 state.player = { ...createInitialPlayerState(), money: state.resources.money || 0 };
                 state.inventory = createInitialInventory();
                 state.equip = createInitialEquip();
-                state.expedition = createInitialExpeditionState();
+                state.expedition = {
+                    ...createInitialExpeditionState(),
+                    missionProgress: preservedMissionProgress
+                };
                 state.gameState = createInitialGameState();
                 // Keep island/resources but clear crew by resetting yacht
             }),
@@ -210,15 +266,14 @@ const useGameStore = create(
             // ============================================================
 
             addResource: (type, amount) => set((state) => {
+                const current = Number(state.resources[type] ?? 0);
+                const next = current + amount;
                 const limit = state.resourceLimits[type];
-                if (limit) {
-                    state.resources[type] = Math.min(
-                        state.resources[type] + amount,
-                        limit
-                    );
-                } else {
-                    state.resources[type] += amount;
+                if (limit !== undefined && limit !== null) {
+                    state.resources[type] = Math.min(next, limit);
+                    return;
                 }
+                state.resources[type] = next;
             }),
 
             spendResources: (cost) => {
@@ -318,12 +373,14 @@ const useGameStore = create(
                     createdAt: Date.now()
                 };
                 state.island.buildings.push(building);
+                recalcHousingAndStorage(state, state._getBuildingConfig);
             }),
 
             upgradeBuilding: (buildingId) => set((state) => {
                 const building = state.island.buildings.find(b => b.id === buildingId);
                 if (building) {
                     building.level += 1;
+                    recalcHousingAndStorage(state, state._getBuildingConfig);
                 }
             }),
 
@@ -495,43 +552,7 @@ const useGameStore = create(
                     );
                 }
 
-                // 4. Housing effects & Storage Limits
-                let housingCap = 5;
-                const storageBonuses = { all: 0 };
-
-                buildings.forEach(building => {
-                    const config = state._getBuildingConfig(building.configId);
-                    if (!config) return;
-
-                    // Housing Cap
-                    if (config.populationBonus) {
-                        housingCap += config.populationBonus * building.level;
-                    }
-
-                    // Storage Capacity
-                    if (config.effect?.type === 'storage') {
-                        const amount = (config.effect.bonus || 0) * building.level;
-                        if (config.effect.resources.includes('all')) {
-                            storageBonuses.all += amount;
-                        } else {
-                            config.effect.resources.forEach(res => {
-                                storageBonuses[res] = (storageBonuses[res] || 0) + amount;
-                            });
-                        }
-                    }
-                });
-
-                state.island.populationCap = housingCap;
-
-                // Update resource limits based on warehouses
-                Object.keys(state.resourceLimits).forEach(res => {
-                    // Base limit is 50/100 defined in INITIAL_RESOURCE_LIMITS, but that's static.
-                    // We should recalculate based on base + storage.
-                    // Assuming INITIAL_RESOURCE_LIMITS are the 'base' values.
-                    const base = INITIAL_RESOURCE_LIMITS[res] || 50;
-                    const bonus = (storageBonuses.all || 0) + (storageBonuses[res] || 0);
-                    state.resourceLimits[res] = base + bonus;
-                });
+                recalcHousingAndStorage(state, state._getBuildingConfig);
 
                 // 5. Random Events System (Daily Chance)
                 // 1 tick = 1 day (assumed for now based on button, real-time likely different)
@@ -1026,6 +1047,7 @@ const useGameStore = create(
                 if (saveData.inventory) state.inventory = saveData.inventory;
                 if (saveData.equip) Object.assign(state.equip, saveData.equip);
                 if (saveData.gameState) Object.assign(state.gameState, saveData.gameState);
+                recalcHousingAndStorage(state, state._getBuildingConfig);
             })
         })),
         {

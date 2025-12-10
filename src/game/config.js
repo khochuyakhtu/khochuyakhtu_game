@@ -94,6 +94,21 @@ export let CONFIG = {
     }
 };
 
+// Normalize floating resource config from DB (snake_case -> camelCase)
+const normalizeFloatingResources = (list) => {
+    if (!Array.isArray(list)) return [];
+    const normalized = list
+        .filter(item => item && item.type)
+        .map(item => ({
+            ...item,
+            spawnRate: item.spawnRate ?? item.spawn_rate ?? 0,
+            baseAmount: item.baseAmount ?? item.base_amount ?? [1, 1],
+            sprite: item.sprite ?? item.icon ?? (RESOURCES[item.type]?.icon)
+        }));
+    console.log('Normalized floating resources:', normalized);
+    return normalized;
+};
+
 // Restore tierColors as it is UI constant not in DB yet (unless added to settings)
 CONFIG.tierColors = [
     '#9ca3af', '#4ade80', '#60a5fa', '#c084fc', '#facc15',
@@ -287,7 +302,10 @@ export const initGameConfig = async () => {
             try { CONFIG.rescueTypes = typeof data.rescueTypes === 'string' ? JSON.parse(data.rescueTypes) : data.rescueTypes; } catch (e) { }
         }
         if (data.floatingResources) {
-            try { CONFIG.floatingResources = typeof data.floatingResources === 'string' ? JSON.parse(data.floatingResources) : data.floatingResources; } catch (e) { }
+            try {
+                const raw = typeof data.floatingResources === 'string' ? JSON.parse(data.floatingResources) : data.floatingResources;
+                CONFIG.floatingResources = normalizeFloatingResources(raw);
+            } catch (e) { CONFIG.floatingResources = []; }
         }
         if (data.yachtVisualTiers) {
             try { CONFIG.yachtVisualTiers = typeof data.yachtVisualTiers === 'string' ? JSON.parse(data.yachtVisualTiers) : data.yachtVisualTiers; } catch (e) { }
@@ -321,7 +339,7 @@ export const Haptics = {
 };
 
 const FIRST_NAMES = ['Олександр', 'Марія', 'Іван', 'Анна', 'Петро', 'Олена', 'Михайло', 'Наталія', 'Андрій', 'Ірина', 'Сергій', 'Тетяна', 'Юрій', 'Оксана', 'Віктор', 'Людмила', 'Дмитро', 'Катерина', 'Василь', 'Світлана', 'Олег', 'Галина', 'Максим', 'Вікторія', 'Роман', 'Юлія', 'Артем', 'Дарина', 'Богдан', 'Софія', 'Владислав', 'Анастасія'];
-const LAST_NAMES = ['Шевченко', 'Бондаренко', 'Коваленко', 'Ткаченко', 'Мельник', 'Кравченко', 'Олійник', 'Шевчук', 'Поліщук', 'Бойко', 'Ткачук', 'Коваль', 'Бондар', 'Павленко', 'Руденко', 'Мороз', 'Литвиненко', 'Назаренко', 'Савченко', 'Петренко', 'Кузьменко', 'Іванов', 'Лисенко', 'Мазур', 'Сидоренко', 'Гончаренко'];
+const LAST_NAMES = ['Шевченко', 'Бондаренко', 'Коваленко', 'Ткаченко', 'Мельник', 'Кравченко', 'Олійник', 'Шевчук', 'Поліщук', 'Бойко', 'Ткачук', 'Коваль', 'Бондар', 'Павленко', 'Руденко', 'Мороз', 'Литвиненко', 'Назаренко', 'Савченко', 'Петренко', 'Кузьменко', 'Лисенко', 'Мазур', 'Сидоренко', 'Гончаренко'];
 
 export const generateName = () => {
     return `${FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)]}`;

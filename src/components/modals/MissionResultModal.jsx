@@ -6,9 +6,15 @@ import { CONFIG } from '../../game/config';
 export default function MissionResultModal() {
     const isOpen = useUIStore((state) => state.missionResultModalOpen);
     const setModal = useUIStore((state) => state.setModal);
+    const setScreen = useUIStore((state) => state.setScreen);
     const result = useGameStore((state) => state.lastMissionResult);
+    const setMode = useGameStore((state) => state.setMode);
 
-    const close = () => setModal('missionResult', false);
+    const close = () => {
+        setModal('missionResult', false);
+        setMode('island');
+        setScreen('island');
+    };
 
     const mapName = result?.mapId ? (CONFIG.biomes?.find(b => b.id === result.mapId)?.name || result.mapId) : 'Мапа';
     const moneyReward = typeof result?.reward === 'number' ? result.reward : (result?.reward?.money || 0);
