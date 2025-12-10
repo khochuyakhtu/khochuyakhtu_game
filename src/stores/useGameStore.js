@@ -128,6 +128,7 @@ const createInitialGameState = () => ({
     crewTimers: { supplier: 0, engineer: 0 },
     lastSyncTime: null,
     expeditionBaselineResources: null,
+    expeditionBaselineIsland: null,
     calendar: calculateCalendar(0)
 });
 
@@ -177,10 +178,12 @@ const useGameStore = create(
                 // Snapshot resources before going to expedition
                 if (mode === 'expedition' && state.mode === 'island') {
                     state.gameState.expeditionBaselineResources = { ...state.resources };
+                    state.gameState.expeditionBaselineIsland = JSON.parse(JSON.stringify(state.island));
                 }
                 // Clear baseline when back to island
                 if (mode === 'island') {
                     state.gameState.expeditionBaselineResources = null;
+                    state.gameState.expeditionBaselineIsland = null;
                 }
                 state.mode = mode;
             }),
@@ -189,6 +192,9 @@ const useGameStore = create(
                 state.mode = 'island';
                 if (state.gameState.expeditionBaselineResources) {
                     state.resources = { ...state.gameState.expeditionBaselineResources };
+                }
+                if (state.gameState.expeditionBaselineIsland) {
+                    state.island = JSON.parse(JSON.stringify(state.gameState.expeditionBaselineIsland));
                 }
                 state.yacht = createInitialYachtState();
                 state.player = { ...createInitialPlayerState(), money: state.resources.money || 0 };

@@ -747,7 +747,7 @@ function InventoryTab({ resources }) {
 
     return (
         <motion.div
-            className="space-y-4"
+            className="space-y-4 h-full overflow-y-auto pr-1 pb-24 custom-scrollbar"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
