@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import useGameStore from '../../stores/useGameStore';
 import useUIStore from '../../stores/useUIStore';
 import GarageModal from '../modals/GarageModal';
@@ -7,7 +7,7 @@ import SaveSlotModal from '../modals/SaveSlotsModal';
 import BuildingDetailsModal from '../modals/BuildingDetailsModal';
 import WorkerAssignmentModal from '../modals/WorkerAssignmentModal';
 import MissionsModal from '../modals/MissionsModal';
-import { CONFIG, RESOURCES, getBuildingUpgradeCost, getBuildingOutput, calculateCalendar, FRAMES_PER_SECOND, FRAMES_PER_WEEK } from '../../game/config';
+import { CONFIG, RESOURCES, getBuildingUpgradeCost, getBuildingOutput, calculateCalendar, FRAMES_PER_WEEK } from '../../game/config';
 import BottomNav from '../ui/BottomNav';
 
 /**
@@ -23,9 +23,9 @@ export default function IslandScreen() {
 
     const { buildings, residents, populationCap, weather } = island;
     const weatherConfig = CONFIG.weatherTypes[weather.type] || CONFIG.weatherTypes.sunny;
-    const calendar = gameState?.calendar || { day: 1, week: 1, month: 1, year: 1 };
-    const dayDuration = CONFIG.dayDuration || 3600;
     const currentFrame = gameState?.gameTime || 0;
+    const calendar = calculateCalendar(currentFrame);
+    const dayDuration = CONFIG.dayDuration || 3600;
     const dayFraction = (currentFrame % dayDuration) / dayDuration;
     const hour = Math.floor(dayFraction * 24).toString().padStart(2, '0');
 
@@ -39,22 +39,6 @@ export default function IslandScreen() {
         if (success) alert('✅ Гра збережена в хмару!');
         else alert('❌ Помилка збереження');
     };
-
-    // Advance in-game time on island: 1 real second = 60 frames (1 in-game minute)
-    useEffect(() => {
-        const id = setInterval(() => {
-            const store = useGameStore.getState();
-            const prevTime = store.gameState.gameTime || 0;
-            const newTime = prevTime + FRAMES_PER_SECOND; // 60 frames per real second
-            const newCalendar = calculateCalendar(newTime);
-            const prevWeek = store.gameState.calendar?.week;
-            store.updateGameState({ gameTime: newTime, calendar: newCalendar });
-            if (prevWeek && newCalendar.week !== prevWeek) {
-                store.tickIsland();
-            }
-        }, 1000);
-        return () => clearInterval(id);
-    }, []);
 
 
 
@@ -222,9 +206,11 @@ function OverviewTab({ island, resources, weatherConfig }) {
                         className="bg-green-600 text-white text-xs px-3 py-1 rounded-lg font-bold"
                         onClick={() => {
                             tickIsland();
-                            const newTime = (gameState?.gameTime || 0) + FRAMES_PER_WEEK;
+                            const store = useGameStore.getState();
+                            const currentTime = store.gameState.gameTime || 0;
+                            const newTime = currentTime + FRAMES_PER_WEEK;
                             const newCal = calculateCalendar(newTime);
-                            updateGameState({ gameTime: newTime, calendar: newCal });
+                            store.updateGameState({ gameTime: newTime, calendar: newCal });
                         }}
                         whileTap={{ scale: 0.95 }}
                     >

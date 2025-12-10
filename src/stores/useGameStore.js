@@ -362,6 +362,13 @@ const useGameStore = create(
                 // Skip if no buildings
                 if (buildings.length === 0 && residents.length === 0) return;
 
+                // Skip cycle if there are no production buildings to avoid random resource gains
+                const productiveBuildings = buildings.filter(b => {
+                    const cfg = state._getBuildingConfig(b.configId);
+                    return cfg?.output;
+                });
+                if (productiveBuildings.length === 0 && residents.length === 0) return;
+
                 // 1. Production from buildings
                 buildings.forEach(building => {
                     const config = state._getBuildingConfig(building.configId);

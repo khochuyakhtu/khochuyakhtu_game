@@ -1,4 +1,4 @@
-import { CONFIG } from '../../game/config';
+import { CONFIG, calculateCalendar } from '../../game/config';
 import useGameStore from '../../stores/useGameStore';
 
 /**
@@ -10,9 +10,9 @@ export default function StatusIndicators() {
 
     const { averageMood, averageHealth, weather } = island;
     const weatherConfig = CONFIG.weatherTypes[weather.type] || CONFIG.weatherTypes.sunny;
-    const calendar = gameState?.calendar || { day: 1, week: 1, month: 1, year: 1 };
-    const dayDuration = CONFIG.dayDuration || 3600;
     const currentFrame = gameState?.gameTime || 0;
+    const calendar = calculateCalendar(currentFrame);
+    const dayDuration = CONFIG.dayDuration || 3600;
     const dayFraction = (currentFrame % dayDuration) / dayDuration;
     const hour = Math.floor(dayFraction * 24);
 

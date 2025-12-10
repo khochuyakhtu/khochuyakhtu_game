@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useUIStore from './stores/useUIStore';
+import useGameStore from './stores/useGameStore';
 import LoadingScreen from './components/screens/LoadingScreen';
 import MainMenu from './components/screens/MainMenu';
 import SettingsScreen from './components/screens/SettingsScreen';
@@ -9,13 +10,14 @@ import TasksScreen from './components/screens/TasksScreen';
 import SavesScreen from './components/screens/SavesScreen';
 import GameScreen from './components/screens/GameScreen';
 import IslandScreen from './components/screens/IslandScreen';
-import { initGameConfig } from './game/config';
+import { initGameConfig, FRAMES_PER_SECOND } from './game/config';
 
 import NotificationSystem from './components/ui/NotificationSystem';
 
 function App() {
     const currentScreen = useUIStore((state) => state.currentScreen);
     const setScreen = useUIStore((state) => state.setScreen);
+    const updateGameState = useGameStore((state) => state.updateGameState);
 
     // Initialize Telegram WebApp
     useEffect(() => {
@@ -59,6 +61,18 @@ function App() {
 
         init();
     }, [setScreen]);
+
+    // Global calendar/time updater while not in expedition (1 real second = 1 in-game minute)
+    useEffect(() => {
+        const id = setInterval(() => {
+            const store = useGameStore.getState();
+            if (store.mode === 'expedition') return; // Game loop handles expedition time
+            const currentTime = store.gameState.gameTime || 0;
+            const newTime = currentTime + FRAMES_PER_SECOND; // 60 frames = 1 in-game minute
+            store.updateGameState({ gameTime: newTime });
+        }, 1000);
+        return () => clearInterval(id);
+    }, [updateGameState]);
 
     return (
         <div className="w-full h-full overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
