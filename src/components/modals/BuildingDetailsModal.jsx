@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { CONFIG, RESOURCES, getBuildingUpgradeCost } from '../../game/config';
+import { CONFIG, RESOURCES, getBuildingUpgradeCost, getBuildingLimit } from '../../game/config';
 
-export default function BuildingDetailsModal({ isOpen, onClose, building, residents, onUnassign, onAssign, onUpgrade, resources }) {
+export default function BuildingDetailsModal({ isOpen, onClose, building, residents, allBuildings = [], weather, onUnassign, onAssign, onUpgrade, resources }) {
     const [isSelecting, setIsSelecting] = useState(false);
 
     // Reset selection mode when modal opens/closes
@@ -16,6 +16,12 @@ export default function BuildingDetailsModal({ isOpen, onClose, building, reside
     const assignedWorkers = residents.filter(r => r.assignedBuildingId === building.id);
     const availableWorkers = residents.filter(r => !r.assignedBuildingId);
     const freeSlots = (buildingConfig.slots || 0) - assignedWorkers.length;
+    const cycle = calculateBuildingCycle(building, buildingConfig, residents, weather);
+    const limit = getBuildingLimit(buildingConfig);
+    const currentCount = (allBuildings || []).filter(b => b.configId === building.configId).length;
+    const limitLabel = limit === Infinity ? '∞' : limit;
+    const productionEntries = Object.entries(cycle.production);
+    const consumptionEntries = Object.entries(cycle.consumption);
 
     const handleAssign = (workerId) => {
         onAssign(workerId);
@@ -148,32 +154,41 @@ export default function BuildingDetailsModal({ isOpen, onClose, building, reside
                                     {/* Stats */}
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="bg-slate-800/30 p-3 rounded-lg border border-slate-700/30">
-                                            <p className="text-xs text-slate-500 mb-1">Виробництво</p>
-                                            <p className="text-green-400 font-bold">
-                                                {(() => {
-                                                    const output = buildingConfig.output;
-                                                    const baseOutput = buildingConfig.base_output;
-                                                    const getAmount = (base) => Math.floor(base * (1 + (building.level - 1) * 0.15)); // Updated to 15%
-
-                                                    if (typeof output === 'string' && baseOutput) {
-                                                        return (
-                                                            <span>
-                                                                {RESOURCES[output]?.icon} {getAmount(baseOutput)}/цикл
-                                                            </span>
-                                                        );
-                                                    } else if (typeof output === 'object' && output !== null) {
-                                                        return Object.entries(output).map(([res, amt]) => (
-                                                            <span key={res}>{RESOURCES[res]?.icon} {amt}/цикл </span>
-                                                        ));
-                                                    }
-                                                    return '—';
-                                                })()}
-                                            </p>
+                                            <p className="text-xs text-slate-500 mb-1">Поточне виробництво</p>
+                                            <div className="space-y-1">
+                                                {productionEntries.length > 0 ? productionEntries.map(([res, amount]) => (
+                                                    <div key={res} className="text-green-400 font-bold flex items-center gap-2">
+                                                        <span>{RESOURCES[res]?.icon || '📦'}</span>
+                                                        <span>{formatCycleValue(amount)}/цикл</span>
+                                                    </div>
+                                                )) : (
+                                                    <p className="text-slate-500 text-sm">Немає виробництва</p>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="bg-slate-800/30 p-3 rounded-lg border border-slate-700/30">
-                                            <p className="text-xs text-slate-500 mb-1">Слоти працівників</p>
+                                            <p className="text-xs text-slate-500 mb-1">Споживання</p>
+                                            <div className="space-y-1">
+                                                {consumptionEntries.length > 0 ? consumptionEntries.map(([res, amount]) => (
+                                                    <div key={res} className="text-red-400 font-bold flex items-center gap-2">
+                                                        <span>{RESOURCES[res]?.icon || '📦'}</span>
+                                                        <span>-{formatCycleValue(amount)}/цикл</span>
+                                                    </div>
+                                                )) : (
+                                                    <p className="text-slate-500 text-sm">Немає споживання</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-800/30 p-3 rounded-lg border border-slate-700/30">
+                                            <p className="text-xs text-slate-500 mb-1">Ліміт будівлі</p>
                                             <p className="text-white font-bold">
-                                                {assignedWorkers.length} / {buildingConfig.slots || 0}
+                                                {currentCount}/{limitLabel}
+                                            </p>
+                                        </div>
+                                        <div className="bg-slate-800/30 p-3 rounded-lg border border-slate-700/30 col-span-2">
+                                            <p className="text-xs text-slate-500 mb-1">Працівники</p>
+                                            <p className="text-white font-bold">
+                                                {assignedWorkers.length} / {buildingConfig.slots || 0} · ефективність {Math.round(cycle.efficiency * 100)}%
                                             </p>
                                         </div>
                                     </div>
@@ -322,4 +337,39 @@ export default function BuildingDetailsModal({ isOpen, onClose, building, reside
             )}
         </AnimatePresence>
     );
+}
+
+function calculateBuildingCycle(building, config, residents, weather) {
+    const workerCount = residents.filter(r => r.assignedBuildingId === building.id).length;
+    const maxSlots = config.slots || 0;
+    const efficiency = maxSlots > 0 ? Math.min(1, workerCount / maxSlots) : 1;
+    const levelBonus = 1 + (building.level - 1) * 0.15;
+    const weatherBonus = (config.output === 'water' && weather?.effects?.waterBonus)
+        ? 1 + weather.effects.waterBonus / 100
+        : 1;
+
+    const production = {};
+    const baseOutput = config.baseOutput ?? config.base_output ?? 0;
+    if (typeof config.output === 'string' && baseOutput) {
+        production[config.output] = Math.floor(baseOutput * efficiency * levelBonus * weatherBonus);
+    } else if (config.output && typeof config.output === 'object') {
+        Object.entries(config.output).forEach(([res, amount]) => {
+            production[res] = Math.floor((amount || 0) * efficiency * levelBonus * weatherBonus);
+        });
+    }
+
+    const consumption = {};
+    if (config.consumption) {
+        Object.entries(config.consumption).forEach(([res, amount]) => {
+            const value = (amount || 0) * efficiency;
+            consumption[res] = Number.isInteger(value) ? value : Math.round(value * 10) / 10;
+        });
+    }
+
+    return { workerCount, maxSlots, efficiency, production, consumption };
+}
+
+function formatCycleValue(value) {
+    if (Number.isInteger(value)) return value;
+    return value.toFixed(1);
 }

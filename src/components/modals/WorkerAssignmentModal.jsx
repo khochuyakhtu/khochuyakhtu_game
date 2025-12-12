@@ -1,6 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { CONFIG } from '../../game/config';
 
+const PROFESSION_MATCHES = {
+    fisher: ['fishery', 'dock', 'pier'],
+    scientist: ['lab', 'library', 'research', 'university'],
+    doctor: ['hospital', 'clinic'],
+    engineer: ['workshop', 'generator', 'mine', 'power', 'factory'],
+    farmer: ['farm', 'garden'],
+    worker: ['production', 'construction', 'sawmill', 'quarry', 'forge'],
+    steward: ['tavern', 'palace', 'mansion']
+};
+
 export default function WorkerAssignmentModal({ isOpen, onClose, worker, buildings, residents = [], onAssign }) {
     if (!isOpen || !worker) return null;
 
@@ -13,21 +23,27 @@ export default function WorkerAssignmentModal({ isOpen, onClose, worker, buildin
         const profession = worker.profession;
         const category = buildingConfig.category;
 
-        // Exact mappings
-        const matches = {
-            fisher: ['fishery', 'dock'],
-            scientist: ['lab', 'library'],
-            doctor: ['hospital', 'clinic'],
-            engineer: ['workshop', 'generator', 'mine'],
-            farmer: ['farm', 'garden'],
-            worker: ['production', 'construction'] // Generic
-        };
+        const matched = PROFESSION_MATCHES[profession]?.some(tag =>
+            buildingConfigId.includes(tag) || category === tag || (buildingConfig.effect?.type === tag)
+        );
 
-        if (matches[profession]?.some(tag => buildingConfigId.includes(tag) || category === tag)) {
-            return { score: 150, label: 'High', color: 'text-green-400', bonus: '+50%' };
+        if (matched || buildingConfig.requiredWorker === profession) {
+            return {
+                score: 150,
+                label: 'Бонус професії',
+                color: 'text-green-400',
+                bonus: '+50%',
+                badge: '🔥 Бонус для цієї будівлі'
+            };
         }
 
-        return { score: 100, label: 'Normal', color: 'text-slate-400', bonus: '' };
+        return {
+            score: 100,
+            label: 'Без бафу',
+            color: 'text-slate-400',
+            bonus: '',
+            badge: null
+        };
     };
 
     const availableBuildings = buildings.filter(b => {
@@ -93,6 +109,11 @@ export default function WorkerAssignmentModal({ isOpen, onClose, worker, buildin
                                                     <p className="text-slate-500 text-xs">Рівень {building.level}</p>
                                                     {slots > 0 && (
                                                         <p className="text-slate-500 text-[10px]">👷 {assignedCount}/{slots}</p>
+                                                    )}
+                                                    {efficiency.badge && (
+                                                        <p className="text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
+                                                            <span>💡</span>{efficiency.badge}
+                                                        </p>
                                                     )}
                                                 </div>
                                             </div>

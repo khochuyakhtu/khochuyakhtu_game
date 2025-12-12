@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { nanoid } from 'nanoid';
 import { cloudService } from '../services/CloudService';
+import useNotificationStore from './useNotificationStore';
 import {
     INITIAL_RESOURCES,
     INITIAL_RESOURCE_LIMITS,
@@ -20,7 +21,8 @@ import {
     calculateCalendar,
     FRAMES_PER_DAY,
     FRAMES_PER_WEEK,
-    FRAMES_PER_SECOND
+    FRAMES_PER_SECOND,
+    getBuildingLimit
 } from '../game/config';
 
 // ============================================================
@@ -121,6 +123,7 @@ const createInitialEquip = () => ({
 const createInitialGameState = () => ({
     paused: true,
     gameTime: 0,
+    playTimeSeconds: 0,
     dayPhase: 0,
     distanceTraveled: 0,
     currentBiome: null,
@@ -183,6 +186,9 @@ const recalcHousingAndStorage = (state, getBuildingConfig) => {
         state.resourceLimits[res] = base + bonus;
     });
 };
+
+const RESIDENT_FOOD_PER_TICK = 2;   // food units per resident per cycle
+const RESIDENT_WATER_PER_TICK = 2;  // water units per resident per cycle
 
 // ============================================================
 // MAIN STORE
@@ -363,6 +369,14 @@ const useGameStore = create(
             }),
 
             addBuilding: (configId, position) => set((state) => {
+                const config = state._getBuildingConfig(configId);
+                const limit = getBuildingLimit(config);
+                const currentCount = state.island.buildings.filter(b => b.configId === configId).length;
+                if (currentCount >= limit) {
+                    console.warn(`Building limit reached for ${configId}: ${currentCount}/${limit}`);
+                    return;
+                }
+
                 const building = {
                     id: nanoid(),
                     configId,
@@ -501,27 +515,52 @@ const useGameStore = create(
                 });
 
                 // 3. Resident consumption and status update
-                const foodNeeded = residents.length;
-                const waterNeeded = residents.length;
+                // Consume food and water per resident; if not enough, residents die
+                let foodStock = state.resources.food || 0;
+                let waterStock = state.resources.water || 0;
+                const survivors = [];
+                const deaths = [];
 
-                const hasEnoughFood = (state.resources.food || 0) >= foodNeeded;
-                const hasEnoughWater = (state.resources.water || 0) >= waterNeeded;
+                residents.forEach(resident => {
+                    const needFood = RESIDENT_FOOD_PER_TICK;
+                    const needWater = RESIDENT_WATER_PER_TICK;
+                    if (foodStock >= needFood && waterStock >= needWater) {
+                        foodStock -= needFood;
+                        waterStock -= needWater;
+                        survivors.push(resident);
+                    } else {
+                        deaths.push(resident);
+                    }
+                });
 
-                // Consume food and water
-                if (hasEnoughFood) {
-                    state.resources.food -= foodNeeded;
+                state.resources.food = foodStock;
+                state.resources.water = waterStock;
+                state.island.residents = survivors;
+                let hadLosses = deaths.length > 0;
+                if (hadLosses) {
+                    const addNotification = useNotificationStore.getState()?.addNotification;
+                    const names = deaths.map(r => r.name).join(', ');
+                    if (addNotification) addNotification('warning', `Померли: ${names} (голод/спрага)`, 4000);
+                    if (!state.island.eventLog) state.island.eventLog = [];
+                    state.island.eventLog.unshift({
+                        id: nanoid(),
+                        type: 'death',
+                        message: `${names} померли від голоду/спраги`,
+                        timestamp: Date.now()
+                    });
+                    if (state.island.eventLog.length > 10) state.island.eventLog.pop();
                 }
-                if (hasEnoughWater) {
-                    state.resources.water -= waterNeeded;
-                }
+
+                // Rebind residents after possible deaths
+                const aliveResidents = state.island.residents;
 
                 // Update each resident
-                residents.forEach(resident => {
+                aliveResidents.forEach(resident => {
                     // Mood changes
-                    const baseMood = 50 + totalMoodBonus;
+                    const baseMood = 50 + totalMoodBonus - (hadLosses ? 20 : 0);
                     const workMoodBonus = resident.assignedBuildingId ? 10 : -5;
-                    const foodMoodPenalty = hasEnoughFood ? 0 : -20;
-                    const waterMoodPenalty = hasEnoughWater ? 0 : -25;
+                    const foodMoodPenalty = 0;
+                    const waterMoodPenalty = 0;
 
                     const targetMood = Math.max(0, Math.min(100,
                         baseMood + workMoodBonus + foodMoodPenalty + waterMoodPenalty
@@ -539,16 +578,16 @@ const useGameStore = create(
                     resident.health = Math.max(0, Math.min(100, resident.health + healthDelta));
 
                     // Hunger tracking
-                    resident.hunger = hasEnoughFood ? 100 : Math.max(0, resident.hunger - 20);
+                    resident.hunger = 100;
                 });
 
                 // Calculate averages
-                if (residents.length > 0) {
+                if (aliveResidents.length > 0) {
                     state.island.averageMood = Math.round(
-                        residents.reduce((sum, r) => sum + r.mood, 0) / residents.length
+                        aliveResidents.reduce((sum, r) => sum + r.mood, 0) / aliveResidents.length
                     );
                     state.island.averageHealth = Math.round(
-                        residents.reduce((sum, r) => sum + r.health, 0) / residents.length
+                        aliveResidents.reduce((sum, r) => sum + r.health, 0) / aliveResidents.length
                     );
                 }
 
@@ -622,8 +661,9 @@ const useGameStore = create(
                 });
 
                 // Resident consumption
-                consumption.food = (consumption.food || 0) + residents.length;
-                consumption.water = (consumption.water || 0) + residents.length;
+                const residentUpkeep = residents.length;
+                consumption.food = (consumption.food || 0) + residentUpkeep * RESIDENT_FOOD_PER_TICK;
+                consumption.water = (consumption.water || 0) + residentUpkeep * RESIDENT_WATER_PER_TICK;
 
                 return { production, consumption };
             },

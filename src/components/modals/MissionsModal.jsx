@@ -140,6 +140,9 @@ export default function MissionsModal() {
                                         <div className={styles.missionGrid}>
                                             {group.missions.map(mission => {
                                                 const { unlocked, completed } = missionState(mission, mapUnlocked);
+                                                const difficulty = Math.max(1, Math.min(10, mission.difficulty || mission.missionNumber || 1));
+                                                const difficultyPct = Math.round((difficulty / 10) * 100);
+                                                const difficultyLabel = difficulty >= 8 ? 'Дуже важко' : difficulty >= 5 ? 'Середньо' : 'Легко';
                                                 return (
                                                     <motion.button
                                                         key={mission.id}
@@ -158,9 +161,7 @@ export default function MissionsModal() {
                                                             <span className={styles.missionTitle}>
                                                                 Місія {mission.missionNumber}
                                                             </span>
-                                                            {mission.difficulty > 5 && (
-                                                                <span className={styles.difficulty}>Hard</span>
-                                                            )}
+                                                            <span className={styles.difficultyBadge}>🔥 {difficulty}/10</span>
                                                         </div>
 
                                                         <div className={styles.rewardLine}>
@@ -176,6 +177,13 @@ export default function MissionsModal() {
                                                                     </span>
                                                                 ))
                                                             }
+                                                        </div>
+
+                                                        <div className={styles.difficultyLine}>
+                                                            <span className={styles.difficultyLabel}>🔥 Складність: {difficulty}/10 ({difficultyLabel})</span>
+                                                            <div className={styles.difficultyMeter}>
+                                                                <span className={styles.difficultyFill} style={{ width: `${difficultyPct}%` }} />
+                                                            </div>
                                                         </div>
 
                                                         {mission.requirements && Object.keys(mission.requirements).length > 0 && (

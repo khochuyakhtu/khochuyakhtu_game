@@ -33,10 +33,12 @@ export default function LeaderboardScreen() {
         switch (activeTab) {
             case 'money':
                 return `$${item.money?.toLocaleString() || 0}`;
-            case 'time':
-                const hours = Math.floor((item.play_time || 0) / 3600);
-                const minutes = Math.floor(((item.play_time || 0) % 3600) / 60);
+            case 'time': {
+                const seconds = item.play_time_seconds ?? item.play_time ?? 0;
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
                 return `${hours}год ${minutes}хв`;
+            }
             case 'distance':
             default:
                 return `${item.distance_record?.toLocaleString() || 0}м`;

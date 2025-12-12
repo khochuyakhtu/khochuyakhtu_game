@@ -213,8 +213,8 @@ export class Renderer {
             this.ctx.fillText(m.lvl, m.x, m.y);
         });
 
-        // Coins + Coffee + Repair Kits (with magnet)
-        const baseMagnet = player.isYacht ? 60 : 30;
+        // Coins + Repair Kits (magnet reduced)
+        const baseMagnet = player.isYacht ? 20 : 10;
         const magnetR = baseMagnet * player.pickupRange;
 
         entities.coins?.forEach(c => {
@@ -243,19 +243,6 @@ export class Renderer {
 
         entities.coffee?.forEach(coffee => {
             if (!isVisible(coffee)) return;
-
-            const d = Math.hypot(coffee.x - player.x, coffee.y - player.y);
-            if (d < magnetR) {
-                this.ctx.save();
-                this.ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
-                this.ctx.lineWidth = 2;
-                this.ctx.setLineDash([5, 5]);
-                this.ctx.beginPath();
-                this.ctx.moveTo(player.x, player.y);
-                this.ctx.lineTo(coffee.x, coffee.y);
-                this.ctx.stroke();
-                this.ctx.restore();
-            }
 
             this.ctx.font = "20px Arial";
             this.ctx.textAlign = "center";

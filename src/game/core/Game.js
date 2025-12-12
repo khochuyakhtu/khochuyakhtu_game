@@ -2,7 +2,7 @@
 import { Renderer } from '../systems/Renderer';
 import { InputManager } from '../systems/InputManager';
 import { EntityManager } from '../systems/EntityManager';
-import { CONFIG, getGunnerStats, FRAMES_PER_DAY, FRAMES_PER_WEEK, calculateCalendar } from '../config';
+import { CONFIG, getGunnerStats, FRAMES_PER_DAY, FRAMES_PER_WEEK, FRAMES_PER_SECOND, calculateCalendar } from '../config';
 import useUIStore from '../../stores/useUIStore';
 
 export class Game {
@@ -24,6 +24,7 @@ export class Game {
         this.dayPhase = 0;
         this.debug = false;
         this.animationFrameId = null;
+        this._realTimeFrameBuffer = 0;
 
         // Current biome
         this.currentBiome = CONFIG.biomes[0];
@@ -90,6 +91,7 @@ export class Game {
         this.dayPhase = 0;
         this.currentBiome = CONFIG.biomes[0];
         this.gunnerLastShot = 0;
+        this._realTimeFrameBuffer = 0;
 
         // Перевіряємо timestamp завантаження
         const loadTimestamp = localStorage.getItem('yacht-load-timestamp');
@@ -214,6 +216,15 @@ export class Game {
 
         this.gameTime++;
         this.dayPhase = (this.gameTime % FRAMES_PER_DAY) / FRAMES_PER_DAY;
+        // Track real playtime in seconds while in expedition
+        this._realTimeFrameBuffer = (this._realTimeFrameBuffer || 0) + 1;
+        if (this._realTimeFrameBuffer >= FRAMES_PER_SECOND) {
+            const inc = Math.floor(this._realTimeFrameBuffer / FRAMES_PER_SECOND);
+            this._realTimeFrameBuffer -= inc * FRAMES_PER_SECOND;
+            const stateStore = this.gameStore.getState();
+            const currentPlay = stateStore.gameState.playTimeSeconds || 0;
+            stateStore.updateGameState({ playTimeSeconds: currentPlay + inc });
+        }
 
         const calendar = calculateCalendar(this.gameTime);
         const prevCalendar = state.gameState.calendar || {};
@@ -524,7 +535,7 @@ export class Game {
         const player = state.player;
         const yacht = state.yacht;
 
-        const baseMagnet = player.isYacht ? 60 : 30;
+        const baseMagnet = player.isYacht ? 20 : 10; // reduced magnet influence
         const magnetR = baseMagnet * player.pickupRange;
 
         // Viewport for performance
@@ -616,21 +627,17 @@ export class Game {
             }
         }
 
-        // Coffee
+        // Coffee (no magnet, only close pickup)
+        const coffeePickupR = 20;
         for (let i = this.entities.coffee.length - 1; i >= 0; i--) {
             const c = this.entities.coffee[i];
             if (!isVisible(c)) continue;
 
             const d = Math.hypot(c.x - player.x, c.y - player.y);
-            if (d < magnetR) {
-                c.x += (player.x - c.x) * 0.1;
-                c.y += (player.y - c.y) * 0.1;
-                if (d < 20) {
-                    // Fix: Use playerUpdates instead of direct mutation
-                    const currentTemp = playerUpdates.bodyTemp !== undefined ? playerUpdates.bodyTemp : player.bodyTemp;
-                    playerUpdates.bodyTemp = Math.min(36.6, currentTemp + 2);
-                    this.entities.coffee.splice(i, 1);
-                }
+            if (d < coffeePickupR) {
+                const currentTemp = playerUpdates.bodyTemp !== undefined ? playerUpdates.bodyTemp : player.bodyTemp;
+                playerUpdates.bodyTemp = Math.min(36.6, currentTemp + 2);
+                this.entities.coffee.splice(i, 1);
             }
         }
 

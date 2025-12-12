@@ -68,8 +68,9 @@ function App() {
             const store = useGameStore.getState();
             if (store.mode === 'expedition') return; // Game loop handles expedition time
             const currentTime = store.gameState.gameTime || 0;
+            const playSeconds = store.gameState.playTimeSeconds || 0;
             const newTime = currentTime + FRAMES_PER_SECOND; // 60 frames = 1 in-game minute
-            store.updateGameState({ gameTime: newTime });
+            store.updateGameState({ gameTime: newTime, playTimeSeconds: playSeconds + 1 });
         }, 1000);
         return () => clearInterval(id);
     }, [updateGameState]);

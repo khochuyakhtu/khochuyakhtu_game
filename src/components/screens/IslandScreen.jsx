@@ -7,7 +7,7 @@ import SaveSlotModal from '../modals/SaveSlotsModal';
 import BuildingDetailsModal from '../modals/BuildingDetailsModal';
 import WorkerAssignmentModal from '../modals/WorkerAssignmentModal';
 import MissionsModal from '../modals/MissionsModal';
-import { CONFIG, RESOURCES, getBuildingUpgradeCost, getBuildingOutput, calculateCalendar, FRAMES_PER_WEEK } from '../../game/config';
+import { CONFIG, RESOURCES, getBuildingUpgradeCost, getBuildingOutput, calculateCalendar, FRAMES_PER_WEEK, getBuildingLimit } from '../../game/config';
 import BottomNav from '../ui/BottomNav';
 
 /**
@@ -43,7 +43,7 @@ export default function IslandScreen() {
 
 
     return (
-        <div className="h-screen w-screen overflow-hidden flex flex-col bg-gradient-to-b from-cyan-900 via-teal-800 to-emerald-900">
+        <div className="h-screen w-screen overflow-x-hidden flex flex-col bg-gradient-to-b from-cyan-900 via-teal-800 to-emerald-900">
             <MissionsModal />
             {/* Header */}
             <motion.div
@@ -85,16 +85,11 @@ export default function IslandScreen() {
                     </div>
                 </div>
 
-                {/* Quick Resources - Horizontal Scroll */}
-                <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-                    {Object.entries(RESOURCES).map(([key, config]) => (
-                        <ResourcePill key={key} type={key} config={config} value={resources[key]} />
-                    ))}
-                </div>
+                {/* Quick Resources CTA removed per request */}
             </motion.div>
 
             {/* Tab Content Container - Flex 1 to take remaining space */}
-            <div className="flex-1 overflow-hidden relative p-4">
+            <div className="flex-1 overflow-y-auto relative p-4 pb-28 custom-scroll">
                 <AnimatePresence mode="wait">
                     {activeTab === 'overview' && (
                         <OverviewTab
@@ -134,21 +129,6 @@ export default function IslandScreen() {
 }
 
 /**
- * Resource pill for quick view
- */
-function ResourcePill({ type, config, value }) {
-    return (
-        <div className="flex items-center gap-1.5 bg-slate-700/50 rounded-lg px-3 py-1.5 min-w-fit">
-            <span className="text-lg">{config.icon}</span>
-            <div>
-                <p className="text-white font-bold text-sm">{formatNumber(value)}</p>
-                <p className="text-[10px] text-slate-400">{config.name}</p>
-            </div>
-        </div>
-    );
-}
-
-/**
  * Overview tab - stats and summary
  */
 function OverviewTab({ island, resources, weatherConfig }) {
@@ -165,7 +145,7 @@ function OverviewTab({ island, resources, weatherConfig }) {
 
     return (
         <motion.div
-            className="space-y-4"
+            className="space-y-4 pb-28"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
@@ -361,6 +341,7 @@ function BuildingsTab({ buildings, residents }) {
     const [selectedTier, setSelectedTier] = useState(1);
     const [selectedBuildingId, setSelectedBuildingId] = useState(null); // Changed to ID for live updates
 
+    const weather = useGameStore((state) => state.island.weather);
     const resources = useGameStore((state) => state.resources);
     const spendResources = useGameStore((state) => state.spendResources);
     const addBuilding = useGameStore((state) => state.addBuilding);
@@ -374,6 +355,11 @@ function BuildingsTab({ buildings, residents }) {
     // Get buildings from config
     const allBuildings = CONFIG.buildings || {};
     const categories = CONFIG.buildingCategories || {};
+
+    const buildingCounts = buildings.reduce((acc, b) => {
+        acc[b.configId] = (acc[b.configId] || 0) + 1;
+        return acc;
+    }, {});
 
     // PROCESSED DATA FOR SHOP
     const filteredShopBuildings = Object.values(allBuildings).filter(b => {
@@ -395,6 +381,10 @@ function BuildingsTab({ buildings, residents }) {
     };
 
     const handleBuild = (buildingConfig) => {
+        const limit = getBuildingLimit(buildingConfig);
+        const currentCount = buildingCounts[buildingConfig.id] || 0;
+        if (currentCount >= limit) return;
+
         if (canAfford(buildingConfig.cost) && spendResources(buildingConfig.cost)) {
             addBuilding(buildingConfig.id, { x: 0, y: 0 });
             // Optional: Switch to owned tab or show success
@@ -433,7 +423,7 @@ function BuildingsTab({ buildings, residents }) {
             </div>
 
             <motion.div
-                className="space-y-4 flex-1 overflow-y-auto min-h-0 pb-20"
+                className="space-y-4 flex-1 overflow-y-auto min-h-0 pb-28 custom-scroll"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
@@ -496,26 +486,32 @@ function BuildingsTab({ buildings, residents }) {
 
                 {subTab === 'shop' && (
                     <>
-                        {/* Tier Filter */}
-                        <div className="flex gap-2 overflow-x-auto pb-2 shrink-0">
-                            {[1, 2, 3, 4, 5].map((tier) => (
-                                <button
-                                    key={tier}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-bold min-w-fit ${selectedTier >= tier
-                                        ? 'bg-cyan-600 text-white'
-                                        : 'bg-slate-700/50 text-slate-400'
-                                        }`}
-                                    onClick={() => setSelectedTier(tier)}
-                                >
-                                    {tier === 1 ? '⛺' : tier === 2 ? '🏠' : tier === 3 ? '🏘️' : tier === 4 ? '🏭' : '🏰'} Тир {tier}
-                                </button>
-                            ))}
+                        {/* Era/Tier Filter - wrapped, modern chips */}
+                        <div className="flex flex-wrap gap-2 pb-2 shrink-0">
+                            {[1, 2, 3, 4, 5].map((tier) => {
+                                const icon = tier === 1 ? '⛺' : tier === 2 ? '🏠' : tier === 3 ? '🏘️' : tier === 4 ? '🏭' : '🏰';
+                                const label = ['І', 'ІІ', 'ІІІ', 'IV', 'V'][tier - 1];
+                                const active = selectedTier >= tier;
+                                return (
+                                    <button
+                                        key={tier}
+                                        className={`px-3 py-1.5 rounded-xl text-sm font-bold shadow-sm transition-colors ${active
+                                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-cyan-800/50'
+                                            : 'bg-slate-800/70 text-slate-300 border border-slate-700 hover:border-cyan-500/50'
+                                            }`}
+                                        onClick={() => setSelectedTier(tier)}
+                                        title={`Епоха ${label}`}
+                                    >
+                                        <span className="mr-2">{icon}</span>Епоха {label}
+                                    </button>
+                                );
+                            })}
                         </div>
 
-                        {/* Category Filter for Shop */}
-                        <div className="flex gap-2 overflow-x-auto pb-2 shrink-0">
+                        {/* Category Filter for Shop - wrapped pills */}
+                        <div className="flex flex-wrap gap-2 pb-3 shrink-0">
                             <button
-                                className={`px-3 py-1.5 rounded-lg text-sm font-bold ${selectedCategory === 'all' ? 'bg-cyan-600 text-white' : 'bg-slate-700/50 text-slate-400'
+                                className={`px-3 py-1.5 rounded-xl text-sm font-bold ${selectedCategory === 'all' ? 'bg-cyan-600 text-white shadow-cyan-800/50' : 'bg-slate-800/70 text-slate-300 border border-slate-700 hover:border-cyan-500/50'
                                     }`}
                                 onClick={() => setSelectedCategory('all')}
                             >
@@ -524,7 +520,7 @@ function BuildingsTab({ buildings, residents }) {
                             {Object.entries(categories).map(([catId, cat]) => (
                                 <button
                                     key={catId}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-bold min-w-fit ${selectedCategory === catId ? 'bg-cyan-600 text-white' : 'bg-slate-700/50 text-slate-400'
+                                    className={`px-3 py-1.5 rounded-xl text-sm font-bold min-w-fit ${selectedCategory === catId ? 'bg-cyan-600 text-white shadow-cyan-800/50' : 'bg-slate-800/70 text-slate-300 border border-slate-700 hover:border-cyan-500/50'
                                         }`}
                                     onClick={() => setSelectedCategory(catId)}
                                 >
@@ -535,40 +531,56 @@ function BuildingsTab({ buildings, residents }) {
 
                         {/* Build List */}
                         <div className="grid grid-cols-2 gap-2 pb-10">
-                            {filteredShopBuildings.map((buildingConfig) => (
-                                <motion.button
-                                    key={buildingConfig.id}
-                                    className={`bg-slate-800/60 rounded-xl p-3 text-left border transition-colors ${canAfford(buildingConfig.cost)
-                                        ? 'border-slate-700/50 hover:border-cyan-500/50'
-                                        : 'border-red-500/30 opacity-60'
-                                        }`}
-                                    onClick={() => handleBuild(buildingConfig)}
-                                    disabled={!canAfford(buildingConfig.cost)}
-                                    whileTap={{ scale: 0.98 }}
-                                >
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-2xl">{buildingConfig.icon}</span>
-                                        <div>
-                                            <span className="text-white font-bold text-sm line-clamp-1">{buildingConfig.name}</span>
-                                            <p className="text-[10px] text-slate-500">Тир {buildingConfig.tier}</p>
+                            {filteredShopBuildings.map((buildingConfig) => {
+                                const limit = getBuildingLimit(buildingConfig);
+                                const currentCount = buildingCounts[buildingConfig.id] || 0;
+                                const atLimit = currentCount >= limit;
+                                const canBuild = !atLimit && canAfford(buildingConfig.cost);
+                                const tierIcon = buildingConfig.tier === 1 ? '⛺' : buildingConfig.tier === 2 ? '🏠' : buildingConfig.tier === 3 ? '🏘️' : buildingConfig.tier === 4 ? '🏭' : '🏰';
+                                const tierLabel = ['І', 'ІІ', 'ІІІ', 'IV', 'V'][buildingConfig.tier - 1] || buildingConfig.tier;
+                                return (
+                                    <motion.button
+                                        key={buildingConfig.id}
+                                        className={`relative overflow-hidden rounded-2xl p-3 text-left border transition-all ${canBuild
+                                            ? 'border-slate-700/60 bg-slate-800/70 hover:border-cyan-500/50 hover:shadow-[0_10px_30px_rgba(34,211,238,0.15)]'
+                                            : 'border-slate-700/60 bg-slate-800/50 opacity-70'
+                                            }`}
+                                        onClick={() => handleBuild(buildingConfig)}
+                                        disabled={!canBuild}
+                                        whileTap={{ scale: canBuild ? 0.98 : 1 }}
+                                    >
+                                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-500/40 via-blue-500/30 to-purple-500/20" />
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className="text-3xl">{buildingConfig.icon}</span>
+                                            <div className="flex-1">
+                                                <span className="text-white font-bold text-base line-clamp-1">{buildingConfig.name}</span>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-700/60 text-cyan-300 font-semibold text-[11px]">
+                                                        {tierIcon} Епоха {tierLabel}
+                                                    </span>
+                                                    <span className={`text-[11px] px-2 py-0.5 rounded-full ${atLimit ? 'bg-red-900/40 text-red-200' : 'bg-emerald-900/30 text-emerald-300'}`}>
+                                                        Ліміт {currentCount}/{limit}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <p className="text-slate-400 text-xs mb-2 line-clamp-2 h-8">{buildingConfig.description}</p>
-                                    <div className="flex flex-wrap gap-1">
-                                        {Object.entries(buildingConfig.cost || {}).map(([res, amount]) => (
-                                            <span
-                                                key={res}
-                                                className={`text-xs rounded px-1.5 py-0.5 ${(resources[res] || 0) >= amount
-                                                    ? 'bg-slate-700 text-slate-300'
-                                                    : 'bg-red-900/50 text-red-300'
-                                                    }`}
-                                            >
-                                                {RESOURCES[res]?.icon} {amount}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </motion.button>
-                            ))}
+                                        <p className="text-slate-300 text-xs mb-3 line-clamp-2 min-h-[32px]">{buildingConfig.description}</p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {Object.entries(buildingConfig.cost || {}).map(([res, amount]) => (
+                                                <span
+                                                    key={res}
+                                                    className={`text-xs rounded-lg px-2 py-1 border ${(resources[res] || 0) >= amount
+                                                        ? 'border-slate-600 bg-slate-700/70 text-slate-100'
+                                                        : 'border-red-700/50 bg-red-900/40 text-red-200'
+                                                        }`}
+                                                >
+                                                    {RESOURCES[res]?.icon} {amount}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </motion.button>
+                                );
+                            })}
                         </div>
                     </>
                 )}
@@ -580,6 +592,8 @@ function BuildingsTab({ buildings, residents }) {
                 onClose={() => setSelectedBuildingId(null)}
                 building={selectedBuilding}
                 residents={residents}
+                allBuildings={buildings}
+                weather={weather}
                 onUnassign={unassignWorker}
                 onAssign={(residentId) => assignWorker(residentId, selectedBuilding.id)}
                 onUpgrade={() => handleUpgrade(selectedBuilding)}
@@ -589,9 +603,12 @@ function BuildingsTab({ buildings, residents }) {
     );
 }
 
-function BuildingCard({ building, residents, onClick }) {
+function BuildingCard({ building, residents, weather, onClick }) {
     const assignedWorkers = residents.filter(r => r.assignedBuildingId === building.id);
     const config = CONFIG.buildings[building.configId] || {};
+    const cycle = calculateBuildingCycle(building, config, residents, weather);
+    const productionEntries = Object.entries(cycle.production);
+    const consumptionEntries = Object.entries(cycle.consumption);
 
     return (
         <motion.div
@@ -609,8 +626,25 @@ function BuildingCard({ building, residents, onClick }) {
                 <div className="text-right">
                     <div className="bg-slate-700/50 px-2 py-1 rounded-lg">
                         <p className="text-cyan-400 font-bold text-sm">{assignedWorkers.length} / {config.slots || 0} 👷</p>
+                        <p className="text-slate-500 text-[10px]">Ефективність {Math.round(cycle.efficiency * 100)}%</p>
                     </div>
                 </div>
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                {productionEntries.length > 0 ? productionEntries.map(([res, amount]) => (
+                    <span key={res} className="flex items-center gap-1 text-green-400 bg-green-500/10 px-2 py-1 rounded-lg">
+                        +{formatCycleValue(amount)} {RESOURCES[res]?.icon || '📦'}/цикл
+                    </span>
+                )) : (
+                    <span className="text-slate-500">Немає виробництва</span>
+                )}
+
+                {consumptionEntries.map(([res, amount]) => (
+                    <span key={res} className="flex items-center gap-1 text-red-400 bg-red-500/10 px-2 py-1 rounded-lg">
+                        -{formatCycleValue(amount)} {RESOURCES[res]?.icon || '📦'}/цикл
+                    </span>
+                ))}
             </div>
         </motion.div>
     );
@@ -628,7 +662,7 @@ function ResidentsTab({ residents, buildings }) {
 
     return (
         <motion.div
-            className="space-y-4"
+            className="space-y-4 pb-28"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
@@ -733,7 +767,7 @@ function InventoryTab({ resources }) {
 
     return (
         <motion.div
-            className="space-y-4 h-full overflow-y-auto pr-1 pb-24 custom-scrollbar"
+            className="space-y-4 h-full overflow-y-auto pr-1 pb-28 custom-scrollbar"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
@@ -789,6 +823,42 @@ function formatNumber(num) {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
     return Math.floor(num).toString();
+}
+
+// Helpers to show real per-cycle production/consumption based on workers
+function calculateBuildingCycle(building, config, residents, weather) {
+    const workerCount = residents.filter(r => r.assignedBuildingId === building.id).length;
+    const maxSlots = config.slots || 0;
+    const efficiency = maxSlots > 0 ? Math.min(1, workerCount / maxSlots) : 1;
+    const levelBonus = 1 + (building.level - 1) * 0.15;
+    const weatherBonus = (config.output === 'water' && weather?.effects?.waterBonus)
+        ? 1 + weather.effects.waterBonus / 100
+        : 1;
+
+    const production = {};
+    const baseOutput = config.baseOutput ?? config.base_output ?? 0;
+    if (typeof config.output === 'string' && baseOutput) {
+        production[config.output] = Math.floor(baseOutput * efficiency * levelBonus * weatherBonus);
+    } else if (config.output && typeof config.output === 'object') {
+        Object.entries(config.output).forEach(([res, amount]) => {
+            production[res] = Math.floor((amount || 0) * efficiency * levelBonus * weatherBonus);
+        });
+    }
+
+    const consumption = {};
+    if (config.consumption) {
+        Object.entries(config.consumption).forEach(([res, amount]) => {
+            const value = (amount || 0) * efficiency;
+            consumption[res] = Number.isInteger(value) ? value : Math.round(value * 10) / 10;
+        });
+    }
+
+    return { workerCount, maxSlots, efficiency, production, consumption };
+}
+
+function formatCycleValue(value) {
+    if (Number.isInteger(value)) return value;
+    return value.toFixed(1);
 }
 
 function CloudButton({ icon, onClick, label }) {

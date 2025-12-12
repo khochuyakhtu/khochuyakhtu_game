@@ -268,9 +268,18 @@ export const initGameConfig = async () => {
         if (data.resources) RESOURCES = data.resources;
 
         if (data.biomes) CONFIG.biomes = data.biomes;
-        if (data.missions) CONFIG.missions = data.missions;
+        if (data.missions) CONFIG.missions = rebalanceMissionDifficulties(data.missions, CONFIG.biomes);
         if (data.yachtModules) CONFIG.yachtModules = data.yachtModules;
         if (data.buildings) CONFIG.buildings = data.buildings;
+
+        // Temporary local tweaks until backend provides consumption data
+        // Factory should consume energy while producing plastic
+        const factory = CONFIG.buildings?.factory;
+        if (factory && !factory.consumption) {
+            const energyUse = 10; // energy per cycle at 100% efficiency
+            factory.consumption = { energy: energyUse };
+            factory.consumption_json = factory.consumption_json || JSON.stringify(factory.consumption);
+        }
 
         // Crew and Professions
         if (data.crewTypes) {
@@ -388,4 +397,61 @@ export const getWorkerProductivity = (resident) => {
 
 export const getBuildingCapacity = (baseCapacity, level, growthFactor = 1.1) => {
     return Math.floor(baseCapacity * Math.pow(growthFactor, level - 1));
+};
+
+// ============================================================
+// MISSION BALANCING HELPERS
+// ============================================================
+const rebalanceMissionDifficulties = (missions = {}, biomes = []) => {
+    if (!missions || typeof missions !== 'object') return missions;
+
+    const biomeLookup = {};
+    biomes.forEach((b, idx) => biomeLookup[b.id] = { ...b, order: idx });
+
+    const normalized = {};
+    Object.entries(missions).forEach(([id, mission]) => {
+        const biome = biomeLookup[mission.mapId] || {};
+        const baseDanger = biome.danger ?? biome.order ?? 1;
+        const missionNumber = mission.missionNumber || 1;
+        const difficulty = Math.min(10, Math.max(1, Math.round(baseDanger + (missionNumber - 1) * 0.8)));
+        normalized[id] = { ...mission, difficulty };
+    });
+
+    return normalized;
+};
+
+// ============================================================
+// BUILDING LIMITS (client-side balancing layer)
+// ============================================================
+export const BUILDING_LIMIT_OVERRIDES = {
+    wonder: 1,          // unique
+    palace: 1,          // unique housing
+    mansion: 2,         // luxury housing
+    university: 2,      // high science
+    research_lab: 3,    // science mid-tier
+    factory: 3,         // plastic producer
+    mega_factory: 2,    // late metal spike
+    power_plant: 2,     // large energy
+    solar_array: 2      // free energy
+};
+
+const DEFAULT_TIER_LIMITS = {
+    1: 6, // basic shelters and wells
+    2: 5, // early production
+    3: 4, // mid-game
+    4: 3, // late-game industry
+    5: 2  // end-game wonders
+};
+
+export const getBuildingLimit = (config) => {
+    if (!config) return Infinity;
+    if (config.maxCount || config.max_count) return config.maxCount ?? config.max_count;
+    if (BUILDING_LIMIT_OVERRIDES[config.id]) return BUILDING_LIMIT_OVERRIDES[config.id];
+
+    const tierLimit = DEFAULT_TIER_LIMITS[config.tier] || 3;
+    if (config.category === 'energy') {
+        // Keep energy snowballing in check
+        return Math.min(tierLimit, 2);
+    }
+    return tierLimit;
 };
