@@ -18,6 +18,7 @@ export default function GarageModal() {
     const vibration = useSettingsStore((state) => state.vibration);
     const [activeTab, setActiveTab] = useState('parts');
     const [selectedCrewKey, setSelectedCrewKey] = useState(null);
+    const [showCrewModal, setShowCrewModal] = useState(false);
 
     const sensors = useSensors(
         useSensor(MouseSensor, {
@@ -157,7 +158,8 @@ export default function GarageModal() {
     const crewList = Object.keys(CONFIG.crewTypes).map((key) => ({
         ...CONFIG.crewTypes[key],
         key,
-        member: (yacht.crew && yacht.crew[key]) || { hired: false, level: 0 }
+        member: (yacht.crew && yacht.crew[key]) || { hired: false, level: 0 },
+        isImageIcon: typeof CONFIG.crewTypes[key]?.icon === 'string' && CONFIG.crewTypes[key].icon.endsWith('.png')
     }));
 
     const getBonusText = (crew, level) => {
@@ -303,89 +305,89 @@ export default function GarageModal() {
                                 Найняти Екіпаж
                             </h3>
 
-                            <div className={styles.crewGrid}>
-                                <div className={styles.crewList}>
-                                    {crewList.map((crew) => {
-                                        const memberLevel = crew.member?.level || 0;
-                                        const bonusText = getBonusText(crew, memberLevel);
-                                        const isSelected = selectedCrew?.key === crew.key;
-
-                                        return (
-                                            <button
-                                                key={crew.key}
-                                                onClick={() => setSelectedCrewKey(crew.key)}
-                                                className={`${styles.crewCard} ${isSelected ? styles.crewCardActive : ''}`}
-                                            >
-                                                <div className={styles.crewRow}>
-                                                    <div className={styles.crewIcon}>{crew.icon}</div>
-                                                    <div className={styles.crewInfo}>
-                                                        <div className={styles.crewName}>{crew.name}</div>
-                                                        <div className={styles.crewDesc}>{crew.desc}</div>
-                                                        {crew.member.hired && (
-                                                            <div className={styles.crewStats}>
-                                                                <div className={styles.crewLevel}>
-                                                                    Рівень: {crew.member.level}
-                                                                </div>
-                                                                {bonusText && (
-                                                                    <div className={styles.crewBonus}>
-                                                                        💎 {bonusText}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {selectedCrew && (
-                                    <div className={styles.crewDetails}>
-                                        <div className={styles.crewDetailsHeader}>
-                                            <div className={styles.crewAvatar}>
-                                                {selectedCrew.photo || selectedCrew.icon || '👤'}
-                                            </div>
-                                            <div>
-                                                <div className={styles.crewDetailsName}>{selectedCrew.name}</div>
-                                                <div className={styles.crewDetailsDesc}>{selectedCrew.desc}</div>
-                                            </div>
+                            <div className={styles.crewList}>
+                                {crewList.map((crew) => (
+                                    <button
+                                        key={crew.key}
+                                        onClick={() => {
+                                            setSelectedCrewKey(crew.key);
+                                            setShowCrewModal(true);
+                                        }}
+                                        className={styles.crewCard}
+                                    >
+                                        <div className={styles.crewInfo}>
+                                            <div className={styles.crewName}>{crew.name}</div>
+                                            {crew.member.hired && (
+                                                <div className={styles.crewLevelInline}>Рівень: {crew.member.level}</div>
+                                            )}
                                         </div>
-
-                                        <div className={styles.crewLevels}>
-                                            <div className={styles.levelLabel}>Поточний рівень</div>
-                                            <div className={styles.levelRow}>
-                                                <span className={styles.levelText}>Рівень: {getBonusComparison(selectedCrew).currentLevel}</span>
-                                                <span className={styles.levelCurrent}>{getBonusComparison(selectedCrew).current}</span>
-                                            </div>
-                                            <div className={styles.levelLabel}>Наступний рівень</div>
-                                            <div className={styles.levelRow}>
-                                                <span className={styles.levelText}>Рівень: {getBonusComparison(selectedCrew).nextLevel}</span>
-                                                <span className={styles.levelNext}>
-                                                    {getBonusComparison(selectedCrew).next}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.crewActions}>
-                                            <div className={styles.cost}>
-                                                Вартість: ${getCrewUpgradeCost(selectedCrew.member?.hired ? selectedCrew.member.level + 1 : 1)}
-                                            </div>
-                                            <button
-                                                onClick={() => handleHireCrew(selectedCrew.key)}
-                                                className={styles.hireButton}
-                                            >
-                                                {selectedCrew.member?.hired ? 'Покращити' : 'Найняти'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     )}
                 </motion.div>
             </motion.div>
 
+            <AnimatePresence>
+                {showCrewModal && selectedCrew && (
+                    <motion.div
+                        className={styles.detailBackdrop}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowCrewModal(false)}
+                    >
+                        <motion.div
+                            className={styles.detailModal}
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className={styles.detailImage}>
+                                {selectedCrew.isImageIcon
+                                    ? <img src={selectedCrew.icon} alt={selectedCrew.name} />
+                                    : <span className={styles.detailEmoji}>{selectedCrew.icon || '👤'}</span>}
+                            </div>
+                            <div className={styles.detailBody}>
+                                <div className={styles.detailTitle}>{selectedCrew.name}</div>
+                                <div className={styles.detailDesc}>{selectedCrew.desc}</div>
+
+                                <div className={styles.detailLevels}>
+                                    <div>
+                                        <span className={styles.levelLabel}>Поточний рівень</span>
+                                        <div className={styles.levelRow}>
+                                            <span className={styles.levelText}>Рівень: {getBonusComparison(selectedCrew).currentLevel}</span>
+                                            <span className={styles.levelCurrent}>{getBonusComparison(selectedCrew).current}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span className={styles.levelLabel}>Наступний рівень</span>
+                                        <div className={styles.levelRow}>
+                                            <span className={styles.levelText}>Рівень: {getBonusComparison(selectedCrew).nextLevel}</span>
+                                            <span className={styles.levelNext}>{getBonusComparison(selectedCrew).next}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className={styles.detailActions}>
+                                    <div className={styles.cost}>Вартість: ${getCrewUpgradeCost(selectedCrew.member?.hired ? selectedCrew.member.level + 1 : 1)}</div>
+                                    <button
+                                        className={styles.hireButton}
+                                        onClick={() => {
+                                            handleHireCrew(selectedCrew.key);
+                                            setShowCrewModal(false);
+                                        }}
+                                    >
+                                        {selectedCrew.member?.hired ? 'Покращити' : 'Найняти'}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
         </>
     );

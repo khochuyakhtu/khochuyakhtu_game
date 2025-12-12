@@ -9,8 +9,8 @@
 }
 
 .modal {
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: #0c1220;
+  border: 1px solid #2b3244;
   border-radius: 16px;
   padding: 24px;
   max-width: 960px;
@@ -208,30 +208,17 @@
 .crewCard {
   width: 100%;
   text-align: left;
-  background: #1f2937;
+  background: linear-gradient(135deg, #111827 0%, #0f1724 100%);
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid #334155;
-  transition: border 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid #2e3747;
+  transition: border 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 .crewCard:hover {
-  border-color: #475569;
-}
-
-.crewCardActive {
-  border-color: #22d3ee;
-  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4), 0 8px 20px rgba(34, 211, 238, 0.15);
-}
-
-.crewRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.crewIcon {
-  font-size: 28px;
+  border-color: #5eead4;
+  box-shadow: 0 8px 20px rgba(94, 234, 212, 0.12);
+  transform: translateY(-1px);
 }
 
 .crewInfo {
@@ -241,7 +228,12 @@
 .crewName {
   font-size: 16px;
   font-weight: 700;
-  color: #ffffff;
+  color: #e2e8f0;
+}
+
+.crewLevelInline {
+  font-size: 11px;
+  color: #cbd5e1;
 }
 
 .crewDesc {
@@ -292,6 +284,7 @@
   align-items: center;
   justify-content: center;
   font-size: 32px;
+  overflow: hidden;
 }
 
 .crewDetailsName {
@@ -371,4 +364,79 @@
 
 .hireButton:active {
   transform: scale(0.97);
+}
+
+/* Detail overlay modal */
+.detailBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+}
+
+.detailModal {
+  background: #0d131f;
+  border: 1px solid #2b3244;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.detailImage {
+  width: 100%;
+  height: 220px;
+  background: radial-gradient(circle at 30% 30%, rgba(94, 234, 212, 0.08), transparent 45%), #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detailImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
+}
+
+.detailEmoji {
+  font-size: 64px;
+}
+
+.detailBody {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+.detailDesc {
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.detailLevels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.detailActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
