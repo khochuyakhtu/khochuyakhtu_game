@@ -69,6 +69,9 @@ export class Game {
         this.isStarting = true;
 
         const state = this.gameStore.getState();
+        if (state.ensureExpeditionBaseline) {
+            state.ensureExpeditionBaseline();
+        }
 
         // Reset all entities
         this.entities = {
@@ -946,12 +949,14 @@ export class Game {
         const ty = baseMission?.ty ?? (player.y + Math.sin(angle) * dist);
 
         const reward = baseMission?.reward ?? { money: 200 + Math.floor(Math.abs(player.y) / 100) };
+        const missionNumber = baseMission?.missionNumber ?? baseMission?.number ?? 1;
 
         this.mission = {
             ...baseMission,
             tx,
             ty,
-            reward
+            reward,
+            missionNumber
         };
 
         state.updateGameState({ mission: this.mission });

@@ -4,7 +4,6 @@ import useGameStore from '../../stores/useGameStore';
 import ResourceBar from '../ui/ResourceBar';
 import StatusIndicators from '../ui/StatusIndicators';
 import ExpeditionStats from './hud/ExpeditionStats';
-import ModeSwitchButton from './hud/ModeSwitchButton';
 import WorkshopButton from './hud/WorkshopButton';
 import CollapseToggle from './hud/CollapseToggle';
 import { formatNumber } from '../../utils/formatNumber';
@@ -12,7 +11,7 @@ import styles from './GameHUD.module.css';
 
 export default function GameHUD() {
     const { player, resources, yacht, mode, gameState } = useGameStore();
-    const missionActive = !!gameState?.mission;
+    const isExpeditionUI = mode === 'expedition' || !!gameState?.mission;
     const [topCollapsed, setTopCollapsed] = useState(false);
     const calendar = useMemo(() => gameState?.calendar || { day: 1, week: 1, month: 1, year: 1 }, [gameState?.calendar]);
 
@@ -24,18 +23,20 @@ export default function GameHUD() {
                 animate={{ opacity: 1, y: 0 }}
             >
                 <div className={styles.topBarLeft}>
-                    {!topCollapsed && <ResourceBar />}
-                    <CollapseToggle collapsed={topCollapsed} onToggle={() => setTopCollapsed((v) => !v)} />
+                    {!isExpeditionUI ? (
+                        <>
+                            {!topCollapsed && <ResourceBar />}
+                            <CollapseToggle collapsed={topCollapsed} onToggle={() => setTopCollapsed((v) => !v)} />
+                        </>
+                    ) : (
+                        <ExpeditionStats
+                            player={player}
+                            yacht={yacht}
+                            money={resources.money}
+                            formatNumber={formatNumber}
+                        />
+                    )}
                 </div>
-
-                {mode === 'expedition' && (
-                    <ExpeditionStats
-                        player={player}
-                        yacht={yacht}
-                        money={resources.money}
-                        formatNumber={formatNumber}
-                    />
-                )}
             </motion.div>
 
             <motion.div
@@ -44,11 +45,8 @@ export default function GameHUD() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2 }}
             >
-                {mode === 'island' && <StatusIndicators calendar={calendar} />}
+                {!isExpeditionUI && <StatusIndicators calendar={calendar} />}
                 <WorkshopButton />
-                {!(mode === 'expedition' && missionActive) && (
-                    <ModeSwitchButton mode={mode} />
-                )}
             </motion.div>
         </>
     );

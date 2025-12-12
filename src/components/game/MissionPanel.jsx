@@ -19,7 +19,8 @@ export default function MissionPanel() {
         ? mission.reward
         : (mission.reward?.money || 0);
 
-    const missionTitle = mission.description || `Доставте вантаж (Місія ${mission.missionNumber || '?'})`;
+    const displayMissionNumber = mission.missionNumber ?? mission.number ?? 1;
+    const missionTitle = mission.description || `Доставте вантаж (Місія ${displayMissionNumber})`;
 
     return (
         <motion.div
@@ -55,4 +56,3 @@ export default function MissionPanel() {
         </motion.div>
     );
 }
-

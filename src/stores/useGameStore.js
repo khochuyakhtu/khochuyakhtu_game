@@ -199,7 +199,8 @@ const createInitialGameState = () => ({
     lastSyncTime: null,
     expeditionBaselineResources: null,
     expeditionBaselineIsland: null,
-    calendar: calculateCalendar(0)
+    calendar: calculateCalendar(0),
+    lastMissionSuccess: false
 });
 
 // Utility: recalc population cap and storage limits based on current buildings
@@ -304,11 +305,21 @@ const useGameStore = create(
                 if (mode === 'expedition' && state.mode === 'island') {
                     state.gameState.expeditionBaselineResources = { ...state.resources };
                     state.gameState.expeditionBaselineIsland = JSON.parse(JSON.stringify(state.island));
+                    state.gameState.lastMissionSuccess = false;
                 }
-                // Clear baseline when back to island
+                // When returning to island, restore baseline if mission not successful
                 if (mode === 'island') {
+                    const hasBaseline = !!state.gameState.expeditionBaselineResources;
+                    if (hasBaseline && !state.gameState.lastMissionSuccess) {
+                        state.resources = { ...state.gameState.expeditionBaselineResources };
+                        if (state.gameState.expeditionBaselineIsland) {
+                            state.island = JSON.parse(JSON.stringify(state.gameState.expeditionBaselineIsland));
+                            ensureSocialState(state.island);
+                        }
+                    }
                     state.gameState.expeditionBaselineResources = null;
                     state.gameState.expeditionBaselineIsland = null;
+                    state.gameState.lastMissionSuccess = false;
                 }
                 state.mode = mode;
             }),
@@ -316,13 +327,18 @@ const useGameStore = create(
             resetAfterGameOver: () => set((state) => {
                 const preservedMissionProgress = { ...(state.expedition?.missionProgress || {}) };
                 state.mode = 'island';
-                if (state.gameState.expeditionBaselineResources) {
+                const hasBaseline = !!state.gameState.expeditionBaselineResources;
+                if (hasBaseline) {
                     state.resources = { ...state.gameState.expeditionBaselineResources };
+                    if (state.gameState.expeditionBaselineIsland) {
+                        state.island = JSON.parse(JSON.stringify(state.gameState.expeditionBaselineIsland));
+                        ensureSocialState(state.island);
+                    }
                 }
-                if (state.gameState.expeditionBaselineIsland) {
-                    state.island = JSON.parse(JSON.stringify(state.gameState.expeditionBaselineIsland));
-                    ensureSocialState(state.island);
-                }
+                state.gameState.expeditionBaselineResources = null;
+                state.gameState.expeditionBaselineIsland = null;
+                state.expedition.currentMission = null;
+                state.gameState.mission = null;
                 state.yacht = createInitialYachtState();
                 state.player = { ...createInitialPlayerState(), money: state.resources.money || 0 };
                 state.inventory = createInitialInventory();
@@ -332,6 +348,8 @@ const useGameStore = create(
                     missionProgress: preservedMissionProgress
                 };
                 state.gameState = createInitialGameState();
+                state.gameState.lastMissionSuccess = false;
+                state.lastMissionResult = null;
                 // Keep island/resources but clear crew by resetting yacht
             }),
 
@@ -1259,11 +1277,16 @@ const useGameStore = create(
             // MISSIONS
             // ============================================================
             startMission: (mission) => set((state) => {
+                // Always snapshot current island/resources at mission start
+                state.gameState.expeditionBaselineResources = { ...state.resources };
+                state.gameState.expeditionBaselineIsland = JSON.parse(JSON.stringify(state.island));
+                state.gameState.lastMissionSuccess = false;
                 state.expedition.currentMission = mission;
                 state.expedition.currentBiome = mission?.mapId || null;
                 state.gameState.mission = mission;
             }),
             completeMission: (mission) => set((state) => {
+                state.gameState.lastMissionSuccess = true;
                 if (!mission?.mapId) return;
                 const current = state.expedition.missionProgress[mission.mapId] || 0;
                 if (mission.missionNumber > current) {
@@ -1277,6 +1300,31 @@ const useGameStore = create(
                     missionNumber: mission.missionNumber,
                     reward: mission.reward
                 };
+            }),
+            revertExpeditionSnapshot: () => set((state) => {
+                const hasBaseline = !!state.gameState.expeditionBaselineResources;
+                if (!hasBaseline) return;
+
+                state.resources = { ...state.gameState.expeditionBaselineResources };
+                if (state.gameState.expeditionBaselineIsland) {
+                    state.island = JSON.parse(JSON.stringify(state.gameState.expeditionBaselineIsland));
+                    ensureSocialState(state.island);
+                }
+
+                state.expedition.currentMission = null;
+                state.gameState.mission = null;
+                state.gameState.expeditionBaselineResources = null;
+                state.gameState.expeditionBaselineIsland = null;
+                state.gameState.lastMissionSuccess = false;
+                state.mode = 'island';
+            }),
+            // Ensure baseline exists when entering or resuming expedition
+            ensureExpeditionBaseline: () => set((state) => {
+                if (!state.gameState.expeditionBaselineResources) {
+                    state.gameState.expeditionBaselineResources = { ...state.resources };
+                    state.gameState.expeditionBaselineIsland = JSON.parse(JSON.stringify(state.island));
+                    state.gameState.lastMissionSuccess = false;
+                }
             }),
             setLastMissionResult: (result) => set((state) => {
                 state.lastMissionResult = result;
