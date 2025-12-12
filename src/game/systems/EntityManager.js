@@ -211,6 +211,7 @@ export class EntityManager {
         const island = gameStore?.getState()?.island;
         const populationCap = island?.populationCap || 20;
         const currentPop = island?.residents?.length || 0;
+        const ownedVipIds = (island?.vips || []).map(v => v.id);
 
         // Don't spawn if at capacity
         if (currentPop >= populationCap) return;
@@ -219,6 +220,28 @@ export class EntityManager {
         const spawnChance = 0.005 * (1 + currentBiome.danger * 0.2);
 
         if (entities.survivors.length < maxSurvivors && Math.random() < spawnChance) {
+            // Rare VIP rescue
+            const vipPool = Object.values(CONFIG.vips || {}).filter(v => !ownedVipIds.includes(v.id));
+            const vipChance = CONFIG.vipSpawnChance ?? 0.05;
+            if (vipPool.length > 0 && Math.random() < vipChance) {
+                const vip = vipPool[Math.floor(Math.random() * vipPool.length)];
+                const survivor = {
+                    id: nanoid(),
+                    x: player.x + (Math.random() - 0.5) * window.innerWidth * 1.5,
+                    y: spawnY + Math.random() * 500,
+                    type: 'vip',
+                    profession: 'vip',
+                    isVip: true,
+                    vipId: vip.id,
+                    platform: 'lifeboat',
+                    name: `${vip.icon || '⭐'} ${vip.name}`,
+                    waveTimer: Math.random() * Math.PI * 2,
+                    bobOffset: Math.random() * Math.PI * 2
+                };
+                entities.survivors.push(survivor);
+                return;
+            }
+
             // Weighted random selection
             const totalWeight = CONFIG.rescueTypes.reduce((sum, t) => sum + t.weight, 0);
             let random = Math.random() * totalWeight;
@@ -494,4 +517,3 @@ export class EntityManager {
         }
     }
 }
-

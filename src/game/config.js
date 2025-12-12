@@ -66,6 +66,14 @@ export let CONFIG = {
     moneyValue: 5,
     dayDuration: 3600,
 
+    // Social & events (loaded from DB)
+    socialSettings: {},
+    festivalConfig: {},
+
+    // VIP rescue definitions (loaded from DB)
+    vips: {},
+    vipSpawnChance: 0.05,
+
     crewTypes: {},
     professions: {},
     rescueTypes: [],
@@ -326,6 +334,36 @@ export const initGameConfig = async () => {
         if (data.dayDuration) CONFIG.dayDuration = data.dayDuration;
         if (data.baseCrewUpgradeCost) CONFIG.baseCrewUpgradeCost = data.baseCrewUpgradeCost;
         if (data.crewCostGrowthFactor) CONFIG.crewCostGrowthFactor = data.crewCostGrowthFactor;
+
+        // Social & events from DB
+        if (data.socialSettings) {
+            CONFIG.socialSettings = data.socialSettings;
+        }
+        if (data.festivalConfig) {
+            // Normalize cost if delivered as flat fields
+            if (!data.festivalConfig.cost && (data.festivalConfig.cost_money || data.festivalConfig.cost_food || data.festivalConfig.cost_water)) {
+                data.festivalConfig.cost = {
+                    money: data.festivalConfig.cost_money ?? 0,
+                    food: data.festivalConfig.cost_food ?? 0,
+                    water: data.festivalConfig.cost_water ?? 0
+                };
+            }
+            CONFIG.festivalConfig = data.festivalConfig;
+        }
+        if (data.vipDefinitions) {
+            const vipMap = {};
+            (Array.isArray(data.vipDefinitions) ? data.vipDefinitions : Object.values(data.vipDefinitions || {})).forEach(vip => {
+                if (!vip?.id) return;
+                vipMap[vip.id] = {
+                    ...vip,
+                    desc: vip.description || vip.desc
+                };
+            });
+            CONFIG.vips = vipMap;
+        }
+        if (data.vipSpawnChance !== undefined && data.vipSpawnChance !== null) {
+            CONFIG.vipSpawnChance = data.vipSpawnChance;
+        }
 
         console.log('Game config loaded from DB successfully!');
         return true;

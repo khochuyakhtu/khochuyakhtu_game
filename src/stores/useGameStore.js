@@ -26,6 +26,70 @@ import {
 } from '../game/config';
 
 // ============================================================
+// HELPERS FOR SOCIAL SYSTEM
+// ============================================================
+
+const createInitialSocialState = () => ({
+    strikeDaysRemaining: 0,
+    activeFestivalDays: 0,
+    festivalCooldown: 0,
+    lastFestivalAt: null,
+    lastCrisis: null
+});
+
+const ensureSocialState = (island) => {
+    if (!island.social) island.social = createInitialSocialState();
+    if (!Array.isArray(island.vips)) island.vips = [];
+    if (!Array.isArray(island.unlockedUniqueBuildings)) island.unlockedUniqueBuildings = [];
+    return island.social;
+};
+
+const getSocialSnapshot = (island) => {
+    return {
+        social: island?.social || createInitialSocialState(),
+        vips: Array.isArray(island?.vips) ? island.vips : []
+    };
+};
+
+const pushEventLog = (state, payload) => {
+    const event = {
+        id: nanoid(),
+        timestamp: Date.now(),
+        ...payload
+    };
+    if (!state.island.eventLog) state.island.eventLog = [];
+    state.island.eventLog.unshift(event);
+    if (state.island.eventLog.length > 10) {
+        state.island.eventLog.pop();
+    }
+};
+
+const aggregateVipModifiers = (vips = []) => {
+    const definitions = CONFIG.vips || {};
+    return vips.reduce((acc, vip) => {
+        const cfg = definitions[vip.id] || {};
+        acc.moodBonus += cfg.moodBonus || 0;
+        acc.productionMult += cfg.productionMult || 0;
+        acc.strikeResist += cfg.strikeResist || 0;
+        acc.sabotageMitigation += cfg.sabotageMitigation || 0;
+        acc.festivalDiscount = Math.max(acc.festivalDiscount, cfg.festivalDiscount || 0);
+        acc.festivalMoodBonus += cfg.festivalMoodBonus || 0;
+        if (cfg.unlockBuilding && !acc.unlocks.includes(cfg.unlockBuilding)) {
+            acc.unlocks.push(cfg.unlockBuilding);
+        }
+        return acc;
+    }, {
+        moodBonus: 0,
+        productionMult: 0,
+        strikeResist: 0,
+        sabotageMitigation: 0,
+        festivalDiscount: 0,
+        festivalMoodBonus: 0,
+        unlocks: []
+    });
+};
+
+// ============================================================
 // INITIAL STATE FACTORIES
 // ============================================================
 
@@ -58,9 +122,12 @@ const createInitialIslandState = () => ({
     buildings: [],
     residents: [],
     animals: [],
+    vips: [],
+    unlockedUniqueBuildings: [],
     populationCap: 5,
     averageMood: 100,
     averageHealth: 100,
+    social: createInitialSocialState(),
     weather: {
         type: 'sunny',
         duration: 3600,
@@ -254,6 +321,7 @@ const useGameStore = create(
                 }
                 if (state.gameState.expeditionBaselineIsland) {
                     state.island = JSON.parse(JSON.stringify(state.gameState.expeditionBaselineIsland));
+                    ensureSocialState(state.island);
                 }
                 state.yacht = createInitialYachtState();
                 state.player = { ...createInitialPlayerState(), money: state.resources.money || 0 };
@@ -418,6 +486,110 @@ const useGameStore = create(
             }),
 
             // ============================================================
+            // SOCIAL ACTIONS
+            // ============================================================
+
+            startFestival: () => {
+                const festivalConfig = CONFIG.festivalConfig || {};
+                let result = { status: 'error' };
+
+                set((state) => {
+                    const social = ensureSocialState(state.island);
+                    const vipModifiers = aggregateVipModifiers(state.island.vips);
+
+                    if (social.activeFestivalDays > 0) {
+                        result = { status: 'already_active' };
+                        return;
+                    }
+                    if (social.festivalCooldown > 0) {
+                        result = { status: 'cooldown', cooldown: social.festivalCooldown };
+                        return;
+                    }
+
+                    const rawCost = festivalConfig.cost || { money: 100, food: 20, water: 15 };
+                    const cost = {};
+                    Object.entries(rawCost).forEach(([res, amt]) => {
+                        const discount = vipModifiers.festivalDiscount || 0;
+                        cost[res] = Math.ceil(amt * (1 - discount));
+                    });
+
+                    const affordable = Object.entries(cost).every(([res, amt]) => (state.resources[res] || 0) >= amt);
+                    if (!affordable) {
+                        result = { status: 'no_resources' };
+                        return;
+                    }
+
+                    Object.entries(cost).forEach(([res, amt]) => {
+                        state.resources[res] = Math.max(0, (state.resources[res] || 0) - amt);
+                    });
+
+                    social.activeFestivalDays = festivalConfig.durationDays || 2;
+                    social.festivalCooldown = (festivalConfig.cooldownDays || 5) + social.activeFestivalDays;
+                    social.lastFestivalAt = Date.now();
+
+                    // Immediate morale bump
+                    const moodBoost = (festivalConfig.moodBoost || 0) + (vipModifiers.festivalMoodBonus || 0);
+                    state.island.residents.forEach(r => r.mood = Math.min(100, r.mood + moodBoost));
+                    if (state.island.residents.length > 0) {
+                        state.island.averageMood = Math.round(
+                            state.island.residents.reduce((sum, r) => sum + r.mood, 0) / state.island.residents.length
+                        );
+                    }
+
+                    pushEventLog(state, {
+                        type: 'good',
+                        icon: '🎉',
+                        name: 'Свято',
+                        message: 'Свято підняло настрій жителів.'
+                    });
+                    result = { status: 'started', duration: social.activeFestivalDays };
+                });
+
+                return result;
+            },
+
+            addVip: (vipId) => set((state) => {
+                const vip = CONFIG.vips?.[vipId];
+                if (!vip) return;
+                ensureSocialState(state.island);
+                if (state.island.vips.some(v => v.id === vipId)) return;
+
+                state.island.vips.push({ id: vipId, rescuedAt: Date.now() });
+
+                if (vip.unlockBuilding && !state.island.unlockedUniqueBuildings.includes(vip.unlockBuilding)) {
+                    state.island.unlockedUniqueBuildings.push(vip.unlockBuilding);
+                }
+
+                pushEventLog(state, {
+                    type: 'good',
+                    icon: vip.icon || '⭐',
+                    name: 'VIP врятовано',
+                    message: `${vip.name} приєднався до поселення`
+                });
+            }),
+
+            getSocialRisk: () => {
+                const state = get();
+                const { social, vips } = getSocialSnapshot(state.island);
+                const vipModifiers = aggregateVipModifiers(vips);
+                const settings = CONFIG.socialSettings || {};
+
+                const mood = state.island.averageMood || 0;
+                const strikeGap = Math.max(0, (settings.strikeMoodThreshold || 45) - mood);
+                const sabotageGap = Math.max(0, (settings.sabotageMoodThreshold || 55) - mood);
+                const strikeChance = strikeGap * (settings.strikeBaseChance || 0.01) * (1 - (vipModifiers.strikeResist || 0));
+                const sabotageChance = sabotageGap * (settings.sabotageBaseChance || 0.01) * (1 - (vipModifiers.sabotageMitigation || 0));
+
+                return {
+                    strike: Math.min(100, Math.round(strikeChance * 10000) / 100),   // percent
+                    sabotage: Math.min(100, Math.round(sabotageChance * 10000) / 100),
+                    strikeDaysRemaining: social.strikeDaysRemaining,
+                    festivalCooldown: social.festivalCooldown,
+                    activeFestivalDays: social.activeFestivalDays
+                };
+            },
+
+            // ============================================================
             // PRODUCTION LOOP - Called periodically to update island economy
             // ============================================================
 
@@ -427,23 +599,37 @@ const useGameStore = create(
              */
             tickIsland: () => set((state) => {
                 const { buildings, residents, weather } = state.island;
-                // Import INITIAL_RESOURCE_LIMITS inside if not available, but it is imported at top level.
-                // However, we need to access it. It is available in scope.
+                const social = ensureSocialState(state.island);
+                const vipModifiers = aggregateVipModifiers(state.island.vips);
+                const socialSettings = CONFIG.socialSettings || {};
+                const festivalConfig = CONFIG.festivalConfig || {};
+                const strikeActive = social.strikeDaysRemaining > 0;
+
+                // Decay timers
+                if (social.activeFestivalDays > 0) social.activeFestivalDays -= 1;
+                if (social.festivalCooldown > 0) social.festivalCooldown -= 1;
+                if (social.strikeDaysRemaining > 0) social.strikeDaysRemaining -= 1;
 
                 // Skip if no buildings
                 if (buildings.length === 0 && residents.length === 0) return;
 
                 // Skip cycle if there are no production buildings to avoid random resource gains
                 const productiveBuildings = buildings.filter(b => {
-                    const cfg = state._getBuildingConfig(b.configId);
-                    return cfg?.output;
-                });
+                        const cfg = state._getBuildingConfig(b.configId);
+                        return cfg?.output;
+                    });
                 if (productiveBuildings.length === 0 && residents.length === 0) return;
 
                 // 1. Production from buildings
                 buildings.forEach(building => {
                     const config = state._getBuildingConfig(building.configId);
                     if (!config || !config.output) return;
+
+                    // Strikes halt production completely
+                    if (strikeActive) {
+                        building.isActive = false;
+                        return;
+                    }
 
                     // Count assigned workers
                     const workerCount = residents.filter(r => r.assignedBuildingId === building.id).length;
@@ -462,7 +648,11 @@ const useGameStore = create(
                         ? 1 + weather.effects.waterBonus / 100
                         : 1;
 
-                    const production = Math.floor(baseOutput * efficiency * levelBonus * weatherBonus);
+                    const productionMult = 1
+                        + (vipModifiers.productionMult || 0)
+                        + (social.activeFestivalDays > 0 ? (festivalConfig.productionBuff || 0) : 0);
+
+                    const production = Math.floor(baseOutput * efficiency * levelBonus * weatherBonus * productionMult);
 
                     // Check consumption requirements
                     let canProduce = true;
@@ -498,8 +688,13 @@ const useGameStore = create(
                 });
 
                 // 2. Apply building effects (mood, health bonuses)
-                let totalMoodBonus = weather.effects?.moodBonus || 0;
+                let totalMoodBonus = (weather.effects?.moodBonus || 0) + (vipModifiers.moodBonus || 0);
                 let totalHealthBonus = 0;
+                if (social.activeFestivalDays > 0) {
+                    totalMoodBonus += (festivalConfig.moodBoost || 0) + (vipModifiers.festivalMoodBonus || 0);
+                } else if (vipModifiers.festivalMoodBonus) {
+                    totalMoodBonus += vipModifiers.festivalMoodBonus;
+                }
 
                 buildings.forEach(building => {
                     const config = state._getBuildingConfig(building.configId);
@@ -516,6 +711,11 @@ const useGameStore = create(
 
                 // 3. Resident consumption and status update
                 // Consume food and water per resident; if not enough, residents die
+                const totalFoodNeed = residents.length * RESIDENT_FOOD_PER_TICK;
+                const totalWaterNeed = residents.length * RESIDENT_WATER_PER_TICK;
+                const hasEnoughFood = (state.resources.food || 0) >= totalFoodNeed;
+                const hasEnoughWater = (state.resources.water || 0) >= totalWaterNeed;
+
                 let foodStock = state.resources.food || 0;
                 let waterStock = state.resources.water || 0;
                 const survivors = [];
@@ -541,14 +741,12 @@ const useGameStore = create(
                     const addNotification = useNotificationStore.getState()?.addNotification;
                     const names = deaths.map(r => r.name).join(', ');
                     if (addNotification) addNotification('warning', `Померли: ${names} (голод/спрага)`, 4000);
-                    if (!state.island.eventLog) state.island.eventLog = [];
-                    state.island.eventLog.unshift({
-                        id: nanoid(),
+                    pushEventLog(state, {
                         type: 'death',
-                        message: `${names} померли від голоду/спраги`,
-                        timestamp: Date.now()
+                        icon: '☠️',
+                        name: 'Втрати',
+                        message: `${names} померли від голоду/спраги`
                     });
-                    if (state.island.eventLog.length > 10) state.island.eventLog.pop();
                 }
 
                 // Rebind residents after possible deaths
@@ -559,11 +757,13 @@ const useGameStore = create(
                     // Mood changes
                     const baseMood = 50 + totalMoodBonus - (hadLosses ? 20 : 0);
                     const workMoodBonus = resident.assignedBuildingId ? 10 : -5;
-                    const foodMoodPenalty = 0;
-                    const waterMoodPenalty = 0;
+                    const foodMoodPenalty = hasEnoughFood ? 0 : -15;
+                    const waterMoodPenalty = hasEnoughWater ? 0 : -10;
+                    const strikePenalty = strikeActive ? -10 : 0;
+                    const festivalMood = social.activeFestivalDays > 0 ? (festivalConfig.moodBoost || 0) * 0.25 : 0;
 
                     const targetMood = Math.max(0, Math.min(100,
-                        baseMood + workMoodBonus + foodMoodPenalty + waterMoodPenalty
+                        baseMood + workMoodBonus + foodMoodPenalty + waterMoodPenalty + strikePenalty + festivalMood
                     ));
 
                     // Slowly move toward target mood
@@ -574,6 +774,10 @@ const useGameStore = create(
                     if (!hasEnoughFood) healthDelta -= 5;
                     if (!hasEnoughWater) healthDelta -= 10;
                     if (resident.mood < 20) healthDelta -= 5; // Severely unhappy affects health
+                    if (strikeActive) healthDelta -= 2;
+                    if (social.activeFestivalDays > 0 && festivalConfig.healthBoost) {
+                        healthDelta += festivalConfig.healthBoost;
+                    }
 
                     resident.health = Math.max(0, Math.min(100, resident.health + healthDelta));
 
@@ -589,6 +793,50 @@ const useGameStore = create(
                     state.island.averageHealth = Math.round(
                         aliveResidents.reduce((sum, r) => sum + r.health, 0) / aliveResidents.length
                     );
+                }
+
+                // 4. Social risk: strikes and sabotage
+                const mood = state.island.averageMood || 0;
+                const strikeGap = Math.max(0, (socialSettings.strikeMoodThreshold || 45) - mood);
+                const sabotageGap = Math.max(0, (socialSettings.sabotageMoodThreshold || 55) - mood);
+                const strikeChance = strikeGap * (socialSettings.strikeBaseChance || 0.01) * (1 - (vipModifiers.strikeResist || 0));
+                const sabotageChance = sabotageGap * (socialSettings.sabotageBaseChance || 0.01) * (1 - (vipModifiers.sabotageMitigation || 0));
+
+                if (!strikeActive && strikeChance > 0 && Math.random() < strikeChance) {
+                    social.strikeDaysRemaining = socialSettings.strikeDurationDays || 2;
+                    social.lastCrisis = { type: 'strike', at: Date.now() };
+                    pushEventLog(state, {
+                        type: 'bad',
+                        icon: '✊',
+                        name: 'Страйк',
+                        message: 'Працівники зупинили виробництво через низький настрій.'
+                    });
+                }
+
+                if (sabotageChance > 0 && Math.random() < sabotageChance) {
+                    const resourceTargets = ['wood', 'stone', 'metal', 'plastic', 'food', 'water', 'energy'];
+                    const availableResources = resourceTargets.filter(r => (state.resources[r] || 0) > 0);
+                    if (availableResources.length > 0) {
+                        const target = availableResources[Math.floor(Math.random() * availableResources.length)];
+                        const loss = Math.max(5, Math.floor((state.resources[target] || 0) * 0.2));
+                        state.resources[target] = Math.max(0, (state.resources[target] || 0) - loss);
+                    }
+
+                    const vulnerableBuilding = buildings.find(b => {
+                        const cfg = state._getBuildingConfig(b.configId);
+                        return cfg?.output && b.level > 1;
+                    });
+                    if (vulnerableBuilding) {
+                        vulnerableBuilding.level -= 1;
+                    }
+
+                    social.lastCrisis = { type: 'sabotage', at: Date.now() };
+                    pushEventLog(state, {
+                        type: 'bad',
+                        icon: '🧨',
+                        name: 'Саботаж',
+                        message: 'Пошкоджено інфраструктуру та втрачено частину ресурсів.'
+                    });
                 }
 
                 recalcHousingAndStorage(state, state._getBuildingConfig);
@@ -1087,6 +1335,7 @@ const useGameStore = create(
                 if (saveData.inventory) state.inventory = saveData.inventory;
                 if (saveData.equip) Object.assign(state.equip, saveData.equip);
                 if (saveData.gameState) Object.assign(state.gameState, saveData.gameState);
+                ensureSocialState(state.island);
                 recalcHousingAndStorage(state, state._getBuildingConfig);
             })
         })),
@@ -1111,7 +1360,7 @@ const useGameStore = create(
                 console.log('Merging persisted state:', persistedState);
 
                 // Merge with defaults
-                return {
+                const merged = {
                     ...currentState,
                     mode: currentState.mode, // Always use default mode (island) on reload
                     resources: { ...currentState.resources, ...persistedState.resources },
@@ -1124,6 +1373,8 @@ const useGameStore = create(
                     equip: { ...currentState.equip, ...persistedState.equip },
                     gameState: { ...currentState.gameState, ...persistedState.gameState }
                 };
+                ensureSocialState(merged.island);
+                return merged;
             }
         }
     )

@@ -609,7 +609,10 @@ export class Game {
                 // Larger pickup range for people (need to stop and rescue)
                 if (d < 50) {
                     // Rescue!
-                    if (survivor.isAnimal) {
+                    if (survivor.isVip && survivor.vipId && state.addVip) {
+                        state.addVip(survivor.vipId);
+                        console.log(`Rescued VIP: ${survivor.name} (${survivor.vipId})`);
+                    } else if (survivor.isAnimal) {
                         // Animals go to island with special effect
                         // TODO: Add animal to island store
                         console.log(`Rescued animal: ${survivor.name}`);

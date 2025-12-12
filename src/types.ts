@@ -158,6 +158,21 @@ export interface Animal {
     effectValue: number;
 }
 
+/** VIP survivor with passive buffs */
+export interface Vip {
+    id: string;
+    rescuedAt: number;
+}
+
+/** Social state of the settlement */
+export interface SocialState {
+    strikeDaysRemaining: number;
+    activeFestivalDays: number;
+    festivalCooldown: number;
+    lastFestivalAt: number | null;
+    lastCrisis: { type: 'strike' | 'sabotage'; at: number } | null;
+}
+
 // ============================================================
 // BUILDING SYSTEM
 // ============================================================
@@ -319,10 +334,13 @@ export interface GameState {
         buildings: Building[];
         residents: Resident[];
         animals: Animal[];
+        vips: Vip[];
+        unlockedUniqueBuildings: string[];
         populationCap: number;
         averageMood: number;
         averageHealth: number;
         weather: Weather;
+        social: SocialState;
     };
 
     // Expedition

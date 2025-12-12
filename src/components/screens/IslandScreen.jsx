@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import useGameStore from '../../stores/useGameStore';
 import useUIStore from '../../stores/useUIStore';
 import GarageModal from '../modals/GarageModal';
@@ -135,6 +135,35 @@ function OverviewTab({ island, resources, weatherConfig }) {
     const { residents, buildings, averageMood, averageHealth } = island;
     const tickIsland = useGameStore((state) => state.tickIsland);
     const getProductionSummary = useGameStore((state) => state.getProductionSummary);
+    const startFestival = useGameStore((state) => state.startFestival);
+    const getSocialRisk = useGameStore((state) => state.getSocialRisk);
+    const [festivalMessage, setFestivalMessage] = useState('');
+    const social = island.social || {};
+    const vips = island.vips || [];
+    const festivalConfig = CONFIG.festivalConfig || {};
+    const vipDiscount = vips.reduce((acc, vip) => {
+        const info = CONFIG.vips?.[vip.id];
+        return Math.max(acc, info?.festivalDiscount || 0);
+    }, 0);
+    const festivalCost = useMemo(() => {
+        const rawCost = festivalConfig.cost || { money: 100, food: 20, water: 15 };
+        const discounted = {};
+        Object.entries(rawCost).forEach(([res, amount]) => {
+            discounted[res] = Math.ceil(amount * (1 - vipDiscount));
+        });
+        return discounted;
+    }, [festivalConfig.cost, vipDiscount]);
+    const socialRisk = useMemo(
+        () => (getSocialRisk ? getSocialRisk() : null),
+        [
+            getSocialRisk,
+            island.averageMood,
+            social.activeFestivalDays,
+            social.festivalCooldown,
+            social.strikeDaysRemaining,
+            vips.length
+        ]
+    );
 
     // Calculate production
     const workerCount = residents.filter(r => r.assignedBuildingId).length;
@@ -142,6 +171,29 @@ function OverviewTab({ island, resources, weatherConfig }) {
 
     // Get real production summary
     const { production, consumption } = getProductionSummary ? getProductionSummary() : { production: {}, consumption: {} };
+
+    const handleFestival = () => {
+        if (!startFestival) return;
+        const res = startFestival();
+        if (!res) return;
+
+        switch (res.status) {
+            case 'started':
+                setFestivalMessage(`Свято триває (${res.duration || 0} д.)`);
+                break;
+            case 'cooldown':
+                setFestivalMessage(`Кулдаун: ${res.cooldown || 0} д.`);
+                break;
+            case 'no_resources':
+                setFestivalMessage('Не вистачає ресурсів на свято');
+                break;
+            case 'already_active':
+                setFestivalMessage('Свято вже активне');
+                break;
+            default:
+                setFestivalMessage('');
+        }
+    };
 
     return (
         <motion.div
@@ -245,6 +297,91 @@ function OverviewTab({ island, resources, weatherConfig }) {
                     </div>
                 </motion.div>
             )}
+
+            {/* Social & VIP status */}
+            <div className="bg-slate-800/60 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-white font-bold">🤝 Соціальний стан</h3>
+                    <span className="text-xs text-slate-400">
+                        {social.activeFestivalDays > 0
+                            ? `Свято ${social.activeFestivalDays}д`
+                            : socialRisk?.strikeDaysRemaining > 0
+                                ? `Страйк ${socialRisk.strikeDaysRemaining}д`
+                                : 'Стабільно'}
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-700/50 p-3 rounded-lg">
+                        <p className="text-[11px] text-slate-400">Ризик страйку</p>
+                        <p className={`text-lg font-bold ${socialRisk?.strike > 25 ? 'text-red-300' : 'text-yellow-200'}`}>
+                            {socialRisk ? `${socialRisk.strike}%` : '—'}
+                        </p>
+                    </div>
+                    <div className="bg-slate-700/50 p-3 rounded-lg">
+                        <p className="text-[11px] text-slate-400">Ризик саботажу</p>
+                        <p className={`text-lg font-bold ${socialRisk?.sabotage > 20 ? 'text-orange-300' : 'text-green-200'}`}>
+                            {socialRisk ? `${socialRisk.sabotage}%` : '—'}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <motion.button
+                        className="bg-indigo-600 text-white text-xs px-3 py-2 rounded-lg font-bold disabled:opacity-50"
+                        onClick={handleFestival}
+                        disabled={social.activeFestivalDays > 0}
+                        whileTap={{ scale: 0.97 }}
+                    >
+                        🎉 Провести свято
+                    </motion.button>
+                    <div className="flex flex-wrap gap-1 items-center text-xs text-slate-300">
+                        {Object.entries(festivalCost).map(([res, amt]) => (
+                            <span key={res} className="bg-slate-700/70 px-2 py-1 rounded border border-slate-600">
+                                {RESOURCES[res]?.icon || '📦'} {formatNumber(amt)}
+                            </span>
+                        ))}
+                        <span>
+                            {social.activeFestivalDays > 0
+                                ? `Триває: ${social.activeFestivalDays}д`
+                                : social.festivalCooldown > 0
+                                    ? `Кулдаун: ${social.festivalCooldown}д`
+                                    : 'Готово до запуску'}
+                        </span>
+                    </div>
+                </div>
+
+                {festivalMessage && (
+                    <p className="text-xs text-cyan-300">{festivalMessage}</p>
+                )}
+                {residents.length === 0 && (
+                    <p className="text-xs text-yellow-300">
+                        Немає жителів — бафи настрою/виробництва від свят та VIP не спрацюють, доки не врятуєте нових.
+                    </p>
+                )}
+
+                <div>
+                    <p className="text-xs text-slate-400 mb-2">VIP (пасивні бафи)</p>
+                    {vips.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2">
+                            {vips.map(vip => {
+                                const info = CONFIG.vips?.[vip.id] || {};
+                                return (
+                                    <div key={vip.id} className="bg-slate-700/50 rounded-lg p-2 flex items-center gap-2">
+                                        <span className="text-xl">{info.icon || '⭐'}</span>
+                                        <div>
+                                            <p className="text-white text-sm font-bold leading-tight">{info.name || vip.id}</p>
+                                            <p className="text-[11px] text-slate-400">{info.desc || 'Пасивний бонус'}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-slate-500 text-sm">Врятуйте VIP у морі, щоб отримати унікальні бафи.</p>
+                    )}
+                </div>
+            </div>
 
             {/* Event Log */}
             <div className="bg-slate-800/60 rounded-xl p-4">
@@ -538,6 +675,7 @@ function BuildingsTab({ buildings, residents }) {
                                 const canBuild = !atLimit && canAfford(buildingConfig.cost);
                                 const tierIcon = buildingConfig.tier === 1 ? '⛺' : buildingConfig.tier === 2 ? '🏠' : buildingConfig.tier === 3 ? '🏘️' : buildingConfig.tier === 4 ? '🏭' : '🏰';
                                 const tierLabel = ['І', 'ІІ', 'ІІІ', 'IV', 'V'][buildingConfig.tier - 1] || buildingConfig.tier;
+                                const limitLabel = Number.isFinite(limit) ? `${currentCount}/${limit}` : `${currentCount}/∞`;
                                 return (
                                     <motion.button
                                         key={buildingConfig.id}
@@ -559,7 +697,7 @@ function BuildingsTab({ buildings, residents }) {
                                                         {tierIcon} Епоха {tierLabel}
                                                     </span>
                                                     <span className={`text-[11px] px-2 py-0.5 rounded-full ${atLimit ? 'bg-red-900/40 text-red-200' : 'bg-emerald-900/30 text-emerald-300'}`}>
-                                                        Ліміт {currentCount}/{limit}
+                                                        Ліміт {limitLabel}
                                                     </span>
                                                 </div>
                                             </div>
