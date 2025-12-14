@@ -2,7 +2,7 @@
 import { Renderer } from '../systems/Renderer';
 import { InputManager } from '../systems/InputManager';
 import { EntityManager } from '../systems/EntityManager';
-import { CONFIG, getGunnerStats, FRAMES_PER_DAY, FRAMES_PER_WEEK, FRAMES_PER_SECOND, calculateCalendar } from '../config';
+import { CONFIG, getGunnerStats, FRAMES_PER_DAY, FRAMES_PER_SECOND, calculateCalendar } from '../config';
 import useUIStore from '../../stores/useUIStore';
 
 export class Game {

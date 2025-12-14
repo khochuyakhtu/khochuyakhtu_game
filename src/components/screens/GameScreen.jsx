@@ -1,12 +1,15 @@
+import { Suspense, lazy } from 'react';
 import GameCanvas from '../game/GameCanvas';
 import GameHUD from '../game/GameHUD';
-import SkillButtons from '../game/SkillButtons';
-import MissionPanel from '../game/MissionPanel';
-import GarageModal from '../modals/GarageModal';
-import GameOverModal from '../modals/GameOverModal';
-import MissionResultModal from '../modals/MissionResultModal';
+import OnboardingOverlay from '../onboarding/OnboardingOverlay';
 import useUIStore from '../../stores/useUIStore';
 import styles from './GameScreen.module.css';
+
+const SkillButtons = lazy(() => import('../game/SkillButtons'));
+const MissionPanel = lazy(() => import('../game/MissionPanel'));
+const GarageModal = lazy(() => import('../modals/GarageModal'));
+const GameOverModal = lazy(() => import('../modals/GameOverModal'));
+const MissionResultModal = lazy(() => import('../modals/MissionResultModal'));
 
 export default function GameScreen() {
     const garageOpen = useUIStore((state) => state.garageOpen);
@@ -17,15 +20,22 @@ export default function GameScreen() {
         <div className={styles.screen}>
             <GameCanvas />
             <GameHUD />
-            <MissionPanel />
-            <SkillButtons />
+            <Suspense fallback={null}>
+                <MissionPanel />
+                <SkillButtons />
+            </Suspense>
 
             <div id="damage-overlay" className={styles.overlay} />
             <div id="cold-vignette" className={styles.overlay} />
 
-            {garageOpen && <GarageModal />}
-            {gameOverOpen && <GameOverModal />}
-            {missionResultOpen && <MissionResultModal />}
+            <Suspense fallback={null}>
+                {garageOpen && <GarageModal />}
+                {gameOverOpen && <GameOverModal />}
+                {missionResultOpen && <MissionResultModal />}
+            </Suspense>
+
+            {/* Onboarding for sea gameplay */}
+            <OnboardingOverlay activeTab="sea" />
         </div>
     );
 }

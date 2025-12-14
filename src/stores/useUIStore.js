@@ -11,6 +11,11 @@ const useUIStore = create((set) => ({
     missionsModalOpen: false,
     missionResultModalOpen: false,
 
+    // Onboarding state
+    onboardingStep: 0, // legacy
+    onboardingSeen: false, // legacy
+    onboardingTabsSeen: {},
+
     // Tab state
     garageTab: 'parts', // 'parts' | 'crew'
 
@@ -39,6 +44,19 @@ const useUIStore = create((set) => ({
             set({ [stateKey]: isOpen });
         }
     },
+
+    // Onboarding actions
+    startOnboarding: () => set({ onboardingStep: 0, onboardingSeen: false }),
+    nextOnboardingStep: () => set((state) => ({ onboardingStep: state.onboardingStep + 1 })),
+    skipOnboarding: () => set({ onboardingSeen: true, onboardingStep: 0 }),
+    completeOnboarding: () => set({ onboardingSeen: true, onboardingStep: 0 }),
+
+    // Tab onboarding
+    markTabOnboardingSeen: (tab) => set((state) => {
+        if (!tab) return {};
+        const current = state.onboardingTabsSeen || {};
+        return { onboardingTabsSeen: { ...current, [tab]: true } };
+    })
 }));
 
 export default useUIStore;

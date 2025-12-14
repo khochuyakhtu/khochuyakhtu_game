@@ -12,9 +12,6 @@ import {
     Package,
     Map,
     Zap,
-    Droplets,
-    ScrollText,
-    AlertCircle,
     Trees,
     Fish,
     Save,
@@ -22,11 +19,10 @@ import {
 } from 'lucide-react';
 import useGameStore from '../../stores/useGameStore';
 import useUIStore from '../../stores/useUIStore';
-import GarageModal from '../modals/GarageModal';
-import SaveSlotModal from '../modals/SaveSlotsModal';
 import BuildingDetailsModal from '../modals/BuildingDetailsModal';
 import WorkerAssignmentModal from '../modals/WorkerAssignmentModal';
 import MissionsModal from '../modals/MissionsModal';
+import OnboardingOverlay from '../onboarding/OnboardingOverlay';
 import { CONFIG, RESOURCES, getBuildingUpgradeCost, calculateCalendar, FRAMES_PER_DAY, FRAMES_PER_SECOND, getBuildingLimit } from '../../game/config';
 
 /**
@@ -39,8 +35,10 @@ export default function IslandScreen() {
     const island = useGameStore((state) => state.island);
     const resources = useGameStore((state) => state.resources);
     const gameState = useGameStore((state) => state.gameState);
+    const tickIsland = useGameStore((state) => state.tickIsland);
+    const setScreen = useUIStore((state) => state.setScreen);
 
-    const { buildings, residents, populationCap, weather } = island;
+    const { buildings, residents, weather } = island;
     const weatherConfig = CONFIG.weatherTypes[weather.type] || CONFIG.weatherTypes.sunny;
     const currentFrame = gameState?.gameTime || 0;
     const calendar = calculateCalendar(currentFrame);
@@ -48,7 +46,6 @@ export default function IslandScreen() {
     const hour = Math.floor(dayFraction * 24).toString().padStart(2, '0');
 
     const saveToCloud = useGameStore((state) => state.saveToCloud);
-    const tickIsland = useGameStore((state) => state.tickIsland);
     const updateGameState = useGameStore((state) => state.updateGameState);
     const lastDayRef = useRef(calendar.day);
 
@@ -79,8 +76,6 @@ export default function IslandScreen() {
     };
 
 
-
-    const setScreen = useUIStore((state) => state.setScreen);
 
     return (
         <div className="h-screen w-screen bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 font-sans text-slate-800 flex justify-center overflow-hidden relative selection:bg-pink-300">
@@ -131,6 +126,8 @@ export default function IslandScreen() {
                     <NavButton icon={<Package size={18} />} label="Склад" active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} />
                 </nav>
             </div>
+
+            <OnboardingOverlay activeTab={activeTab} />
         </div>
     );
 }

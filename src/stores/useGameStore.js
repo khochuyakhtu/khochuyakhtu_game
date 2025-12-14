@@ -4,6 +4,8 @@ import { immer } from 'zustand/middleware/immer';
 import { nanoid } from 'nanoid';
 import { cloudService } from '../services/CloudService';
 import useNotificationStore from './useNotificationStore';
+import { snapshotExpeditionState, restoreExpeditionSnapshot, clearExpeditionSnapshot, ensureExpeditionBaseline } from './expeditionSnapshot';
+import { createInitialSocialState, ensureSocialState, getSocialSnapshot, pushEventLog, aggregateVipModifiers } from './socialHelpers';
 import {
     INITIAL_RESOURCES,
     INITIAL_RESOURCE_LIMITS,
@@ -20,76 +22,10 @@ import {
     CONFIG,
     calculateCalendar,
     FRAMES_PER_DAY,
-    FRAMES_PER_WEEK,
     FRAMES_PER_SECOND,
     getBuildingLimit
 } from '../game/config';
 
-// ============================================================
-// HELPERS FOR SOCIAL SYSTEM
-// ============================================================
-
-const createInitialSocialState = () => ({
-    strikeDaysRemaining: 0,
-    activeFestivalDays: 0,
-    festivalCooldown: 0,
-    lastFestivalAt: null,
-    lastCrisis: null
-});
-
-const ensureSocialState = (island) => {
-    if (!island.social) island.social = createInitialSocialState();
-    if (!Array.isArray(island.vips)) island.vips = [];
-    if (!Array.isArray(island.unlockedUniqueBuildings)) island.unlockedUniqueBuildings = [];
-    return island.social;
-};
-
-const getSocialSnapshot = (island) => {
-    return {
-        social: island?.social || createInitialSocialState(),
-        vips: Array.isArray(island?.vips) ? island.vips : []
-    };
-};
-
-const pushEventLog = (state, payload) => {
-    const event = {
-        id: nanoid(),
-        timestamp: Date.now(),
-        ...payload
-    };
-    if (!state.island.eventLog) state.island.eventLog = [];
-    state.island.eventLog.unshift(event);
-    if (state.island.eventLog.length > 10) {
-        state.island.eventLog.pop();
-    }
-};
-
-const aggregateVipModifiers = (vips = []) => {
-    const definitions = CONFIG.vips || {};
-    return vips.reduce((acc, vip) => {
-        const cfg = definitions[vip.id] || {};
-        acc.moodBonus += cfg.moodBonus || 0;
-        acc.productionMult += cfg.productionMult || 0;
-        acc.strikeResist += cfg.strikeResist || 0;
-        acc.sabotageMitigation += cfg.sabotageMitigation || 0;
-        acc.festivalDiscount = Math.max(acc.festivalDiscount, cfg.festivalDiscount || 0);
-        acc.festivalMoodBonus += cfg.festivalMoodBonus || 0;
-        if (cfg.unlockBuilding && !acc.unlocks.includes(cfg.unlockBuilding)) {
-            acc.unlocks.push(cfg.unlockBuilding);
-        }
-        return acc;
-    }, {
-        moodBonus: 0,
-        productionMult: 0,
-        strikeResist: 0,
-        sabotageMitigation: 0,
-        festivalDiscount: 0,
-        festivalMoodBonus: 0,
-        unlocks: []
-    });
-};
-
-// ============================================================
 // INITIAL STATE FACTORIES
 // ============================================================
 
@@ -301,25 +237,20 @@ const useGameStore = create(
             // ============================================================
 
             setMode: (mode) => set((state) => {
-                // Snapshot resources before going to expedition
                 if (mode === 'expedition' && state.mode === 'island') {
-                    state.gameState.expeditionBaselineResources = { ...state.resources };
-                    state.gameState.expeditionBaselineIsland = JSON.parse(JSON.stringify(state.island));
-                    state.gameState.lastMissionSuccess = false;
+                    snapshotExpeditionState(state);
                 }
-                // When returning to island, restore baseline if mission not successful
                 if (mode === 'island') {
-                    const hasBaseline = !!state.gameState.expeditionBaselineResources;
-                    if (hasBaseline && !state.gameState.lastMissionSuccess) {
-                        state.resources = { ...state.gameState.expeditionBaselineResources };
-                        if (state.gameState.expeditionBaselineIsland) {
-                            state.island = JSON.parse(JSON.stringify(state.gameState.expeditionBaselineIsland));
+                    if (!state.gameState.lastMissionSuccess) {
+                        if (restoreExpeditionSnapshot(state)) {
                             ensureSocialState(state.island);
                         }
+                    } else {
+                        // Successful mission: clear snapshot, keep progress
+                        clearExpeditionSnapshot(state);
                     }
-                    state.gameState.expeditionBaselineResources = null;
-                    state.gameState.expeditionBaselineIsland = null;
-                    state.gameState.lastMissionSuccess = false;
+                    state.expedition.currentMission = null;
+                    state.gameState.mission = null;
                 }
                 state.mode = mode;
             }),
@@ -327,18 +258,9 @@ const useGameStore = create(
             resetAfterGameOver: () => set((state) => {
                 const preservedMissionProgress = { ...(state.expedition?.missionProgress || {}) };
                 state.mode = 'island';
-                const hasBaseline = !!state.gameState.expeditionBaselineResources;
-                if (hasBaseline) {
-                    state.resources = { ...state.gameState.expeditionBaselineResources };
-                    if (state.gameState.expeditionBaselineIsland) {
-                        state.island = JSON.parse(JSON.stringify(state.gameState.expeditionBaselineIsland));
-                        ensureSocialState(state.island);
-                    }
+                if (restoreExpeditionSnapshot(state)) {
+                    ensureSocialState(state.island);
                 }
-                state.gameState.expeditionBaselineResources = null;
-                state.gameState.expeditionBaselineIsland = null;
-                state.expedition.currentMission = null;
-                state.gameState.mission = null;
                 state.yacht = createInitialYachtState();
                 state.player = { ...createInitialPlayerState(), money: state.resources.money || 0 };
                 state.inventory = createInitialInventory();
@@ -348,7 +270,6 @@ const useGameStore = create(
                     missionProgress: preservedMissionProgress
                 };
                 state.gameState = createInitialGameState();
-                state.gameState.lastMissionSuccess = false;
                 state.lastMissionResult = null;
                 // Keep island/resources but clear crew by resetting yacht
             }),
@@ -1277,10 +1198,7 @@ const useGameStore = create(
             // MISSIONS
             // ============================================================
             startMission: (mission) => set((state) => {
-                // Always snapshot current island/resources at mission start
-                state.gameState.expeditionBaselineResources = { ...state.resources };
-                state.gameState.expeditionBaselineIsland = JSON.parse(JSON.stringify(state.island));
-                state.gameState.lastMissionSuccess = false;
+                snapshotExpeditionState(state);
                 state.expedition.currentMission = mission;
                 state.expedition.currentBiome = mission?.mapId || null;
                 state.gameState.mission = mission;
@@ -1301,30 +1219,9 @@ const useGameStore = create(
                     reward: mission.reward
                 };
             }),
-            revertExpeditionSnapshot: () => set((state) => {
-                const hasBaseline = !!state.gameState.expeditionBaselineResources;
-                if (!hasBaseline) return;
-
-                state.resources = { ...state.gameState.expeditionBaselineResources };
-                if (state.gameState.expeditionBaselineIsland) {
-                    state.island = JSON.parse(JSON.stringify(state.gameState.expeditionBaselineIsland));
-                    ensureSocialState(state.island);
-                }
-
-                state.expedition.currentMission = null;
-                state.gameState.mission = null;
-                state.gameState.expeditionBaselineResources = null;
-                state.gameState.expeditionBaselineIsland = null;
-                state.gameState.lastMissionSuccess = false;
-                state.mode = 'island';
-            }),
             // Ensure baseline exists when entering or resuming expedition
             ensureExpeditionBaseline: () => set((state) => {
-                if (!state.gameState.expeditionBaselineResources) {
-                    state.gameState.expeditionBaselineResources = { ...state.resources };
-                    state.gameState.expeditionBaselineIsland = JSON.parse(JSON.stringify(state.island));
-                    state.gameState.lastMissionSuccess = false;
-                }
+                ensureExpeditionBaseline(state);
             }),
             setLastMissionResult: (result) => set((state) => {
                 state.lastMissionResult = result;
@@ -1366,6 +1263,7 @@ const useGameStore = create(
                         state.gameState.lastSyncTime = Date.now();
                         state.gameState.mission = null;
                         state.expedition.currentMission = null;
+                        clearExpeditionSnapshot(state);
                     });
                     return true;
                 }
@@ -1383,6 +1281,11 @@ const useGameStore = create(
                 if (saveData.inventory) state.inventory = saveData.inventory;
                 if (saveData.equip) Object.assign(state.equip, saveData.equip);
                 if (saveData.gameState) Object.assign(state.gameState, saveData.gameState);
+                // Drop any stale expedition snapshots/missions on load
+                clearExpeditionSnapshot(state);
+                state.expedition.currentMission = null;
+                state.gameState.mission = null;
+                state.gameState.lastMissionSuccess = false;
                 ensureSocialState(state.island);
                 recalcHousingAndStorage(state, state._getBuildingConfig);
             })
